@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>地球岁差 3D 演示 · 25800 年周期</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#0b0e1a;}
+  #app{width:100%;height:100%;}
+  .panel{
+    position:fixed;z-index:10;background:rgba(255,255,255,.94);color:#1c2333;
+    border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13px;line-height:1.55;
+  }
+  #ctrl{top:14px;left:14px;width:252px;padding:12px 14px;}
+  #ctrl h1{font-size:15px;margin:0 0 6px;color:#0f1b3d;}
+  #ctrl .sub{font-size:11px;color:#5a6478;margin-bottom:8px;}
+  .row{display:flex;align-items:center;gap:8px;margin:7px 0;}
+  .row label{flex:1;}
+  button{
+    border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;
+    background:#2b5fd9;color:#fff;font-family:inherit;
+  }
+  button:hover{background:#1e4bb8;}
+  button.gray{background:#8a93a8;}
+  button.gray:hover{background:#6f7890;}
+  input[type=range]{flex:1.2;accent-color:#2b5fd9;}
+  .toggles{margin-top:8px;border-top:1px solid #dde2ec;padding-top:6px;}
+  .toggles label{display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer;font-size:12.5px;}
+  .toggles input{accent-color:#2b5fd9;}
+  #info{bottom:14px;left:14px;width:320px;padding:12px 14px;}
+  #info h2{margin:0 0 6px;font-size:14px;color:#0f1b3d;}
+  .kv{display:flex;justify-content:space-between;margin:3px 0;}
+  .kv b{color:#0f1b3d;font-weight:600;}
+  .star-now{background:#fff3cd;border-left:4px solid #e0a800;padding:6px 8px;border-radius:6px;margin:6px 0;}
+  .legend{bottom:14px;right:14px;padding:10px 14px;font-size:12px;max-width:250px;}
+  .legend h3{margin:0 0 6px;font-size:13px;color:#0f1b3d;}
+  .legend .it{display:flex;align-items:center;gap:7px;margin:4px 0;}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none;}
+  .note{font-size:11px;color:#5a6478;margin-top:6px;}
+  #title{top:14px;right:14px;padding:8px 14px;text-align:right;max-width:262px;}
+  #title h1{margin:0;font-size:17px;color:#0f1b3d;}
+  #title p{margin:2px 0 0;font-size:11px;color:#5a6478;}
+  @media (max-width:900px){#legend,#title{display:none;}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="panel" id="title">
+  <h1>地球岁差（进动）3D 演示</h1>
+  <p>视角：黄道面为基准水平面 · 地轴像陀螺一样摆动 · 周期约 25800 年 · 春分点沿黄道每年西退约 50.29″</p>
+</div>
+
+<div class="panel" id="ctrl">
+  <h1>控制台</h1>
+  <div class="sub">模拟时间：从公元前 3000 年起 · 默认当前年份</div>
+  <div class="row">
+    <button id="btnPlay">⏸ 暂停</button>
+    <button id="btnReset" class="gray">复位</button>
+  </div>
+  <div class="row">
+    <span style="font-size:12px">速度</span>
+    <input type="range" id="speed" min="0" max="100" value="8">
+    <span id="speedTxt" style="font-size:12px;min-width:74px;text-align:right"></span>
+  </div>
+  <div class="row" style="gap:6px">
+    <button id="btnSlow" class="gray" style="flex:1;padding:5px 4px;font-size:12px">看公转 0.2年/秒</button>
+    <button id="btnFast" class="gray" style="flex:1;padding:5px 4px;font-size:12px">看岁差 100年/秒</button>
+  </div>
+  <div style="border-top:1px solid #dde2ec;margin:8px 0 4px;padding-top:8px">
+    <div class="row" style="margin:2px 0">
+      <span style="font-size:12px;flex:none;width:60px">周期进度</span>
+      <input type="range" id="cycle" min="0" max="1000" value="0" style="flex:1">
+    </div>
+    <div class="row" style="margin:2px 0;justify-content:space-between">
+      <span style="font-size:11px;color:#5a6478">← 公元前 3000 年</span>
+      <span id="cycleTxt" style="font-size:11.5px;color:#0f1b3d;font-weight:600">0 / 25800 年（0%）</span>
+      <span style="font-size:11px;color:#5a6478">公元 22800 年 →</span>
+    </div>
+    <div class="note" style="margin:2px 0 0">从左到右拖动「周期进度」，手动演示一个完整岁差周期内地轴指向（天极）的变化。</div>
+  </div>
+  <div class="note" style="margin:2px 0 4px">想看春分点西退与北极星更替，请切到「看岁差」速度（地轴约 4 分钟转一圈）。</div>
+  <div class="toggles">
+    <label><input type="checkbox" id="tgAxis"> 地轴与岁差圆锥</label>
+    <label><input type="checkbox" id="tgEquinox" checked> 春分点及其西退方向</label>
+    <label><input type="checkbox" id="tgPole" checked> 天极轨迹与北极星更替</label>
+    <label><input type="checkbox" id="tgZodiac"> 黄道十二宫（星座连线）</label>
+    <label><input type="checkbox" id="tgDate" checked> 节气日期环与视太阳</label>
+  </div>
+</div>
+
+<div class="panel" id="info">
+  <h2>实时状态</h2>
+  <div class="kv"><span>模拟年份</span><b id="iYear">公元 2000 年</b></div>
+  <div class="kv"><span>岁差累计角</span><b id="iPrec">0.0°</b></div>
+  <div class="kv"><span>春分点黄经</span><b id="iEq">0°（双鱼/白羊交界）</b></div>
+  <div class="star-now" id="iStar">当前北极星：<b>勾陈一（小熊座α）</b></div>
+  <div class="note">北极星更替：约公元前 2800 年 → 天龙座α（右枢）；现在 → 勾陈一；约公元 13700 年 → 织女星。<br>注：地球自转仅为示意，未按真实速度比例。</div>
+</div>
+
+<div class="panel legend" id="legend">
+  <h3>图例</h3>
+  <div class="it"><span class="dot" style="background:#ffd23e"></span>太阳（黄道面中心）</div>
+  <div class="it"><span class="dot" style="background:#3f8cff"></span>地球（自转轴倾斜 23.44°）</div>
+  <div class="it"><span class="dot" style="background:#ff5252"></span>春分点（♈，沿黄道西退）</div>
+  <div class="it"><span class="dot" style="background:#b06cff"></span>天极轨迹圈（半径 23.44°）</div>
+  <div class="it"><span class="dot" style="background:#fff"></span>黄道（地球公转轨道面）</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+if(typeof THREE==='undefined'){
+  document.getElementById('app').innerHTML='<div style="color:#fff;padding:40px;font-size:16px">三维库加载失败，请检查网络后刷新页面。</div>';
+  return;
+}
+
+/* ---------- 常量 ---------- */
+const PRECESS_YEARS = 25800;          // 岁差周期（年）
+const TILT = 23.44 * Math.PI/180;     // 黄赤交角
+const ORBIT_R = 10;                   // 地球公转轨道半径（场景单位）
+const SKY_R = 54.5;                   // 天球半径（天极轨迹圈投影在天球面上，与黄道带同球）
+const AXIS_L = 3.2;                   // 地轴可见长度
+const EPOCH = 2000;                   // 时间零点：公元2000年
+const EPOCH_EQ0 = -Math.PI/2;         // 春分点在 t=0 的方位角（新约定：pos=(R cos a,0,-R sin a)，a 增大=向东/逆时针俯视）
+const D2R = Math.PI/180;              // 角度→弧度
+
+/* ---------- 场景 ---------- */
+const app=document.getElementById('app');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;   // 贴图色彩校正
+renderer.setSize(innerWidth,innerHeight);
+app.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0b0e1a);
+
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,600);
+// 默认位于天球（半径≈54.5）之外：距离≈150，视场恰好容纳整个天球
+camera.position.set(0,58,138);
+
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=0.08;
+controls.target.set(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+const sunLight=new THREE.PointLight(0xfff2cc,1.6,0,2);
+scene.add(sunLight);
+
+/* ---------- 工具：文字精灵 ---------- */
+function makeLabel(text,opt){
+  opt=opt||{};
+  const fs=opt.fontSize||30, pad=16;
+  const cv=document.createElement('canvas');
+  const ctx=cv.getContext('2d');
+  ctx.font=fs+'px "Microsoft YaHei", sans-serif';
+  const w=Math.ceil(ctx.measureText(text).width)+pad*2;
+  cv.width=w;cv.height=fs+pad;
+  const c2=cv.getContext('2d');
+  c2.font=fs+'px "Microsoft YaHei", sans-serif';
+  c2.textAlign='center';c2.textBaseline='middle';
+  c2.lineWidth=6;c2.strokeStyle=opt.stroke||'rgba(0,0,0,.85)';
+  c2.strokeText(text,w/2,cv.height/2);
+  c2.fillStyle=opt.color||'#ffffff';
+  c2.fillText(text,w/2,cv.height/2);
+  const tex=new THREE.CanvasTexture(cv);tex.minFilter=THREE.LinearFilter;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+  const sp=new THREE.Sprite(mat);
+  const s=opt.scale||0.02;
+  sp.scale.set(w*s,cv.height*s,1);
+  return sp;
+}
+
+/* ---------- 恒星背景 ---------- */
+(function(){
+  const n=900,pos=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const u=Math.random()*2-1, ph=Math.random()*Math.PI*2, r=70;
+    const s=Math.sqrt(1-u*u);
+    pos[i*3]=r*s*Math.cos(ph);pos[i*3+1]=r*u;pos[i*3+2]=r*s*Math.sin(ph);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x9aa7c7,size:0.28,sizeAttenuation:true,transparent:true,opacity:0.8})));
+})();
+
+/* ---------- 太阳 ---------- */
+const sun=new THREE.Mesh(new THREE.SphereGeometry(1.3,48,32),
+  new THREE.MeshBasicMaterial({color:0xffd23e}));
+scene.add(sun);
+(function(){ // 光晕
+  const cv=document.createElement('canvas');cv.width=cv.height=128;
+  const c=cv.getContext('2d');
+  const g=c.createRadialGradient(64,64,4,64,64,64);
+  g.addColorStop(0,'rgba(255,220,120,.9)');g.addColorStop(0.4,'rgba(255,190,60,.35)');g.addColorStop(1,'rgba(255,190,60,0)');
+  c.fillStyle=g;c.fillRect(0,0,128,128);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));
+  sp.scale.set(6,6,1);scene.add(sp);
+})();
+
+/* ---------- 黄道面与公转轨道 ---------- */
+const eclipticDisc=new THREE.Mesh(
+  new THREE.CircleGeometry(ORBIT_R,96),
+  new THREE.MeshBasicMaterial({color:0x8899cc,transparent:true,opacity:0.08,side:THREE.DoubleSide})
+);
+eclipticDisc.rotation.x=-Math.PI/2;scene.add(eclipticDisc);
+
+function circleLine(r,y,color,opacity,seg){
+  seg=seg||128;
+  const pts=[];
+  for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;pts.push(new THREE.Vector3(r*Math.cos(a),y,r*Math.sin(a)));}
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color:color,transparent:true,opacity:opacity}));
+}
+scene.add(circleLine(ORBIT_R,0,0xffffff,0.5));        // 公转轨道
+
+// 黄极轴（过太阳，垂直黄道面）
+const eclipticAxis=new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-6,0),new THREE.Vector3(0,SKY_R+4,0)]),
+  new THREE.LineDashedMaterial({color:0x7f8cab,dashSize:0.7,gapSize:0.5,transparent:true,opacity:0.6})
+);
+eclipticAxis.computeLineDistances();scene.add(eclipticAxis);
+scene.add(makeLabel('黄道北极（黄极）',{color:'#aab6d4',fontSize:44,scale:0.045}).translateY(SKY_R+4.6));
+
+/* ---------- 地球与岁差结构 ---------- */
+const earthPivot=new THREE.Group();scene.add(earthPivot); // 位于地球公转位置
+
+// 层级：pivot -> precessNode(绕黄极转) -> tiltNode(倾斜23.44°) -> 地球+地轴
+const precessNode=new THREE.Group();earthPivot.add(precessNode);
+const tiltNode=new THREE.Group();precessNode.add(tiltNode);
+tiltNode.rotation.z=-TILT;  // 负号：使地轴北端倾向黄经90°方向（真实天象：天极黄经≈90°），与天赤道环、北极星位置一致
+
+const earth=new THREE.Mesh(new THREE.SphereGeometry(0.62,64,48),
+  new THREE.MeshStandardMaterial({color:0x3f8cff,roughness:0.55,metalness:0.05}));
+tiltNode.add(earth);
+
+// 卫星影像贴图（NASA Blue Marble），多源回退；加载成功后替换纯色
+(function(){
+  const urls=[
+    'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg',
+    'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+    'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg'
+  ];
+  const loader=new THREE.TextureLoader();
+  loader.setCrossOrigin('anonymous');
+  (function tryLoad(i){
+    if(i>=urls.length)return; // 全部失败则保留纯色球体
+    loader.load(urls[i],tex=>{
+      tex.encoding=THREE.sRGBEncoding;
+      tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+      earth.material.map=tex;
+      // 参考教学地球仪配色：整体蓝色调（乘性着色，海洋深蓝、陆地偏蓝）
+      earth.material.color.set(0x8cb8ff);
+      earth.material.needsUpdate=true;
+      const wf=earth.children.find(o=>o.material&&o.material.wireframe);
+      if(wf)earth.remove(wf);
+    },undefined,()=>tryLoad(i+1));
+  })(0);
+})();
+
+/* ---------- 地球经纬网 + 特殊纬线（随地表自转） ---------- */
+const gridGroup=new THREE.Group();earth.add(gridGroup);
+(function(){
+  const GR=0.628, YE=0.632;
+  function ringPts(radius,latDeg,seg){
+    const phi=latDeg*D2R,r=radius*Math.cos(phi),y=radius*Math.sin(phi),pts=[];
+    for(let k=0;k<=seg;k++){const t=k/seg*Math.PI*2;pts.push(new THREE.Vector3(r*Math.cos(t),y,r*Math.sin(t)));}
+    return pts;
+  }
+  function addLine(pts,color,op){
+    gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({color:color,transparent:true,opacity:op})));
+  }
+  // 白色经纬网：纬线每20°，经线每20°（降低不透明度使线条观感更纤细；WebGL 不支持真实线宽）
+  for(let lat=-60;lat<=60;lat+=20)addLine(ringPts(GR,lat,96),0xffffff,0.18);
+  for(let lon=0;lon<360;lon+=20){
+    const pts=[];
+    for(let lat=-90;lat<=90;lat+=5){
+      const la=lat*D2R,lo=lon*D2R;
+      pts.push(new THREE.Vector3(GR*Math.cos(la)*Math.cos(lo),GR*Math.sin(la),-GR*Math.cos(la)*Math.sin(lo)));
+    }
+    addLine(pts,0xffffff,0.18);
+  }
+  // 黄色特殊纬线：赤道、南北回归线、南北极圈
+  [0,23.44,-23.44,66.56,-66.56].forEach(la=>addLine(ringPts(YE,la,128),0xffe066,0.95));
+})();
+
+/* ---------- 蓝色大气辉光（已按需求移除） ---------- */
+
+const axisMat=new THREE.LineBasicMaterial({color:0xff6b6b});
+const axisLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+  [new THREE.Vector3(0,-AXIS_L,0),new THREE.Vector3(0,AXIS_L,0)]),axisMat);
+tiltNode.add(axisLine);
+const northTip=new THREE.Mesh(new THREE.SphereGeometry(0.09,12,8),new THREE.MeshBasicMaterial({color:0xff5252}));
+northTip.position.y=AXIS_L;tiltNode.add(northTip);
+const southTip=northTip.clone();southTip.position.y=-AXIS_L;tiltNode.add(southTip);
+const axisLabel=makeLabel('地轴（北端↑）',{color:'#ff8a8a',fontSize:21,scale:0.021});
+axisLabel.position.y=AXIS_L+0.5;tiltNode.add(axisLabel);
+
+// 岁差圆锥（地轴北端扫出的圆，随 pivot 移动，绕黄极方向）
+const coneR=AXIS_L*Math.sin(TILT), coneY=AXIS_L*Math.cos(TILT);
+const precessGroup=new THREE.Group();earthPivot.add(precessGroup);
+precessGroup.add(circleLine(coneR,coneY,0xffa94d,0.55,72));
+const coneSide=new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(coneR,coneY,0),new THREE.Vector3(0,0,0),new THREE.Vector3(-coneR,coneY,0)]),
+  new THREE.LineBasicMaterial({color:0xffa94d,transparent:true,opacity:0.3}));
+precessGroup.add(coneSide);
+const coneLabel=makeLabel('岁差圆锥（25800 年一圈）',{color:'#ffc078',fontSize:20,scale:0.019});
+coneLabel.position.set(0,coneY+0.6,0);precessGroup.add(coneLabel);
+
+/* ---------- 春分点标记（沿黄道西退） ---------- */
+const equinoxGroup=new THREE.Group();scene.add(equinoxGroup);
+const eqDiamond=new THREE.Mesh(new THREE.OctahedronGeometry(0.34),
+  new THREE.MeshBasicMaterial({color:0xff5252}));
+eqDiamond.position.y=0.2;equinoxGroup.add(eqDiamond);
+const eqLabel=makeLabel('春分点 ♈',{color:'#ff7b7b',fontSize:28,scale:0.03});
+eqLabel.position.y=1.0;equinoxGroup.add(eqLabel);
+
+// 西退方向箭头（切向）
+const arrow=new THREE.Group();equinoxGroup.add(arrow);
+const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.9,8),
+  new THREE.MeshBasicMaterial({color:0xffa94d}));
+shaft.rotation.z=Math.PI/2;shaft.position.x=0.75;arrow.add(shaft);
+const head=new THREE.Mesh(new THREE.ConeGeometry(0.13,0.3,10),
+  new THREE.MeshBasicMaterial({color:0xffa94d}));
+head.rotation.z=-Math.PI/2;head.position.x=1.32;arrow.add(head);
+const arrowLabel=makeLabel('西退 50.29″/年',{color:'#ffc078',fontSize:24,scale:0.024});
+arrowLabel.position.set(0.7,0.55,0);arrow.add(arrowLabel);
+
+// 地球—春分点示意连线
+const eqLink=new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]),
+  new THREE.LineDashedMaterial({color:0xff7b7b,dashSize:0.35,gapSize:0.25,transparent:true,opacity:0.7}));
+scene.add(eqLink);
+
+/* ---------- 天极轨迹与北极星更替 ---------- */
+const poleR=SKY_R*Math.sin(TILT), poleY=SKY_R*Math.cos(TILT);
+const poleTrace=circleLine(poleR,poleY,0xb06cff,0.85,160);
+scene.add(poleTrace);
+
+// 黄极到天极轨迹的示意（天极当前方向射线，从原点出发）
+const poleRay=new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3()]),
+  new THREE.LineDashedMaterial({color:0xd0a9ff,dashSize:0.5,gapSize:0.3,transparent:true,opacity:0.75}));
+scene.add(poleRay);
+
+// 三颗"北极星"：放在天极轨迹圆上（方位角按时间反推）
+// t=0 时天极方位角为 0；时间前进 → 方位角减小（西退）
+const poleStarObjs=[];
+function polarPos(az){return new THREE.Vector3(poleR*Math.cos(az),poleY,-poleR*Math.sin(az));}
+const POLE_STARS=[
+  {name:'天龙座α · 右枢',year:-2800,color:0xffd8a8,size:0.28},
+  {name:'勾陈一 · 北极星（现在）',year:2000,color:0xfff3b0,size:0.36},
+  {name:'织女星（天琴座α）',year:13700,color:0xbfd8ff,size:0.32},
+];
+POLE_STARS.forEach(s=>{
+  const t=s.year-EPOCH;
+  const az=-2*Math.PI*t/PRECESS_YEARS;   // 与天极方位角公式一致
+  s.az=az;
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(s.size,16,12),
+    new THREE.MeshBasicMaterial({color:s.color}));
+  mesh.position.copy(polarPos(az));
+  scene.add(mesh);
+  poleStarObjs.push(mesh);
+  const lb=makeLabel(s.name+(s.year<0?'（约公元前 '+(-s.year)+' 年）':'（约公元 '+s.year+' 年）'),
+    {color:'#e8d9ff',fontSize:42,scale:0.042});
+  lb.position.copy(mesh.position).y+=0.9;
+  scene.add(lb);
+  poleStarObjs.push(lb);
+});
+const traceLabel=makeLabel('天极轨迹圈 · 半径 23.44°',{color:'#c9a6ff',fontSize:42,scale:0.044});
+traceLabel.position.copy(polarPos(Math.PI/2)).y-=1.1;
+scene.add(traceLabel);
+poleStarObjs.push(traceLabel);
+
+/* ---------- 黄道十二宫 + 星座连线（真实亮星赤经赤纬） ---------- */
+const zodiacGroup=new THREE.Group();scene.add(zodiacGroup);
+const ZODIAC=['白羊','金牛','双子','巨蟹','狮子','室女','天秤','天蝎','人马','摩羯','宝瓶','双鱼'];
+ZODIAC.forEach((z,i)=>{
+  const az=EPOCH_EQ0 + (i+0.5)*(Math.PI*2/12);
+  const lb=makeLabel(z+'座',{color:'#9fb3e8',fontSize:26,scale:0.026});
+  lb.position.set((ORBIT_R+1.6)*Math.cos(az),0.25,-(ORBIT_R+1.6)*Math.sin(az));
+  zodiacGroup.add(lb);
+});
+
+// 星座数据：stars=[赤经(小时),赤纬(°)]，lines=星点索引连线
+const FIGS=[
+ {stars:[[2.12,23.46],[1.91,20.81],[1.89,19.29],[2.83,27.26]],lines:[[2,1],[1,0],[0,3]]},                     //白羊
+ {stars:[[4.01,12.49],[4.33,15.63],[4.48,15.87],[4.60,16.51],[4.48,19.18],[5.44,28.61],[5.63,21.14]],         //金牛
+  lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[3,6],[6,5]]},
+ {stars:[[7.58,31.89],[7.76,28.03],[6.63,16.40],[7.33,21.98],[6.72,25.13],[6.38,22.51],[7.07,20.57]],         //双子
+  lines:[[5,4],[4,0],[1,3],[3,2],[3,6]]},
+ {stars:[[8.78,28.76],[8.72,21.47],[8.74,18.15],[8.28,9.19],[8.97,11.86]],                                     //巨蟹
+  lines:[[0,1],[1,2],[2,3],[3,4],[4,2]]},
+ {stars:[[9.76,23.77],[9.88,26.01],[10.28,23.42],[10.33,19.84],[10.12,16.76],[10.14,11.97],[11.24,20.52],[11.82,14.57],[11.24,15.43]], //狮子
+  lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[3,6],[6,7],[7,8],[8,5]]},
+ {stars:[[11.84,1.76],[12.33,-0.67],[12.69,-1.45],[12.93,3.40],[13.04,10.96],[13.42,-11.16],[13.58,-0.60]],   //室女
+  lines:[[0,1],[1,2],[2,3],[3,4],[2,5],[5,6]]},
+ {stars:[[14.85,-16.04],[15.28,-9.38],[15.59,-14.79],[15.07,-25.28]],                                          //天秤
+  lines:[[0,1],[1,2],[2,3],[3,0]]},
+ {stars:[[16.09,-19.81],[16.01,-22.62],[15.98,-26.11],[16.35,-25.59],[16.49,-26.43],[16.60,-28.21],[16.84,-34.29],[16.87,-38.05],[16.91,-42.36],[17.20,-43.24],[17.62,-43.00],[17.80,-40.13],[17.71,-39.03],[17.56,-37.10],[17.51,-37.30]], //天蝎
+  lines:[[0,1],[1,2],[0,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13],[13,14]]},
+ {stars:[[18.09,-30.42],[18.35,-29.83],[18.40,-34.38],[18.28,-36.76],[19.04,-29.88],[19.12,-27.67],[18.92,-26.30],[18.77,-26.99],[18.47,-25.42]], //人马(茶壶)
+  lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,4],[6,8],[8,1]]},
+ {stars:[[20.37,-12.54],[20.35,-14.78],[21.10,-17.23],[21.37,-16.83],[21.67,-16.66],[21.78,-16.13],[21.62,-19.81],[21.44,-22.41],[20.86,-26.92],[20.77,-25.27]], //摩羯
+  lines:[[1,0],[0,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,0]]},
+ {stars:[[20.79,-9.50],[21.53,-5.57],[22.28,-7.81],[22.10,-0.32],[22.36,-1.39],[22.48,-0.02],[22.59,-0.12],[22.88,-7.58],[22.91,-15.82],[22.85,-13.59]], //宝瓶
+  lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,9],[9,8]]},
+ {stars:[[23.29,3.28],[23.47,6.38],[23.67,5.63],[23.70,1.78],[23.45,1.26],[23.04,3.82],[23.99,6.86],[0.82,7.59],[1.03,7.89],[1.23,7.57],[1.62,6.13],[2.03,2.76],[1.52,15.35]], //双鱼
+  lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[2,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12]]},
+];
+const figGroup=new THREE.Group();zodiacGroup.add(figGroup);
+const STAR_R=55,Y_AXIS=new THREE.Vector3(0,1,0);
+FIGS.forEach((fig,i)=>{
+  // 赤道坐标 → 黄道坐标（场景约定 pos=(R cos a,0,-R sin a)，向东为正）
+  const pts=fig.stars.map(s=>{
+    const a=s[0]*15*D2R,d=s[1]*D2R;
+    return new THREE.Vector3(
+      Math.cos(d)*Math.cos(a),
+      Math.sin(d)*Math.cos(TILT)-Math.cos(d)*Math.sin(a)*Math.sin(TILT),
+      -(Math.sin(d)*Math.sin(TILT)+Math.cos(d)*Math.sin(a)*Math.cos(TILT)));
+  });
+  // 将星座沿黄道平移，使其居中于第 i 个 30° 区段（与十二宫标签对齐）
+  const mean=new THREE.Vector3();pts.forEach(p=>mean.add(p));mean.normalize();
+  let dAz=EPOCH_EQ0+(i+0.5)*Math.PI/6-Math.atan2(-mean.z,mean.x);
+  while(dAz>Math.PI)dAz-=2*Math.PI;while(dAz<-Math.PI)dAz+=2*Math.PI;
+  const pos=pts.map(v=>v.applyAxisAngle(Y_AXIS,dAz).multiplyScalar(STAR_R));
+  // 恒星
+  pos.forEach(p=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.30,10,8),
+      new THREE.MeshBasicMaterial({color:0xd6e4ff}));
+    m.position.copy(p);figGroup.add(m);
+  });
+  // 星座连线（渲染层级高于黄道带填充）
+  const segs=[];fig.lines.forEach(l=>{segs.push(pos[l[0]],pos[l[1]]);});
+  const segLines=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segs),
+    new THREE.LineBasicMaterial({color:0x7fa8ff,transparent:true,opacity:0.8}));
+  segLines.renderOrder=2;
+  figGroup.add(segLines);
+  // 星座名（双语）
+  const LATIN=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpius','Sagittarius','Capricornus','Aquarius','Pisces'];
+  const c=new THREE.Vector3();pos.forEach(p=>c.add(p));c.divideScalar(pos.length);
+  const lb=makeLabel(ZODIAC[i]+'座 '+LATIN[i],{color:'#d8e2ff',fontSize:44,scale:0.050});
+  lb.renderOrder=2;
+  lb.position.copy(c).multiplyScalar(1.05);figGroup.add(lb);
+});
+
+/* ---------- 黄道线容器（永远显示，不随任何开关） ---------- */
+const eclipticAlways=new THREE.Group();scene.add(eclipticAlways);
+let bandFillRef=null;   // 黄道带填充网格引用（供 animate 动态切换单双面渲染）
+
+/* ---------- 天球高亮：12宫经度扇面（透明亮色） + 黄道带 ---------- */
+(function(){
+  const SR=54.2; // 略小于恒星半径，位于天球面层
+  // 球面点：λ(黄经,°)、β(黄纬,°) → 场景坐标（a = EPOCH_EQ0 + λ）
+  function sph(lam,beta){
+    const a=EPOCH_EQ0+lam*D2R,b=beta*D2R;
+    return new THREE.Vector3(Math.cos(b)*Math.cos(a),Math.sin(b),-Math.cos(b)*Math.sin(a)).multiplyScalar(SR);
+  }
+  function panel(lam0,lam1,beta0,beta1,nc,nr,color,op,target,side){
+    const pos=[],idx=[];
+    for(let r=0;r<=nr;r++)for(let c2=0;c2<=nc;c2++)
+      pos.push(sph(lam0+(lam1-lam0)*c2/nc,beta0+(beta1-beta0)*r/nr));
+    for(let r=0;r<nr;r++)for(let c2=0;c2<nc;c2++){
+      const a=r*(nc+1)+c2,b=a+1,d=a+nc+1,e=d+1;
+      idx.push(a,d,b,b,d,e);
+    }
+    const g=new THREE.BufferGeometry().setFromPoints(pos); // pos 为 Vector3 数组，必须用 setFromPoints 展开（直接传 Float32BufferAttribute 会全变 NaN）
+    g.setIndex(idx);
+    const mesh=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
+      color:color,transparent:true,opacity:op,side:side||THREE.DoubleSide,depthWrite:false}));
+    mesh.renderOrder=1;
+    (target||zodiacGroup).add(mesh);
+    return mesh;
+  }
+  // 黄道带范围：上下边界两条淡黄色圆环（黄纬 ±12°）+ 其间淡黄色填充（随十二宫开关显隐）
+  [12,-12].forEach(b=>{
+    const pts=[];for(let l=0;l<=360;l+=3)pts.push(sph(l,b));
+    zodiacGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({color:0xffdf80,transparent:true,opacity:0.85})));
+  });
+  // 两环之间填充为淡黄色带（不透明度 0.25；渲染面随相机位置动态切换：天球外看单层外面，天球内（中心）看也能渲染上黄色）
+  bandFillRef=panel(0,360,-12,12,96,12,0xf9dd6e,0.25,zodiacGroup,THREE.BackSide);
+  // 黄道线（亮黄色，即太阳周年视运动轨迹）——永远显示，不随十二宫开关
+  (function(){
+    const pts=[];for(let l=0;l<=360;l+=3)pts.push(sph(l,0));
+    eclipticAlways.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({color:0xffd24d,transparent:true,opacity:0.9})));
+  })();
+  // 两环之间的 12 条分界弧（每 30° 一条，横跨黄道带 ±12°，划分十二宫区段）
+  for(let i=0;i<12;i++){
+    const pts=[];for(let b=-12;b<=12;b+=1.5)pts.push(sph(i*30,b));
+    zodiacGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({color:0xffd24d,transparent:true,opacity:0.9})));
+  }
+  // 大标题
+  const bigLb=makeLabel('Zodiac  黄道带',{color:'#cfcfdd',fontSize:64,scale:0.03});
+  bigLb.material.opacity=0.9;
+  bigLb.position.set(47*Math.cos(D2R*160),2.5,-47*Math.sin(D2R*160));
+  zodiacGroup.add(bigLb);
+})();
+
+/* ---------- 节气日期环（随岁差旋转，附着于二分点） ---------- */
+const dateGroup=new THREE.Group();scene.add(dateGroup);
+const TERMS=[
+  ['春分','3/21',0],['清明','4/5',15],['谷雨','4/20',30],['立夏','5/6',45],
+  ['小满','5/21',60],['芒种','6/6',75],['夏至','6/22',90],['小暑','7/7',105],
+  ['大暑','7/23',120],['立秋','8/8',135],['处暑','8/23',150],['白露','9/8',165],
+  ['秋分','9/23',180],['寒露','10/8',195],['霜降','10/23',210],['立冬','11/7',225],
+  ['小雪','11/22',240],['大雪','12/7',255],['冬至','12/22',270],['小寒','1/6',285],
+  ['大寒','1/20',300],['立春','2/4',315],['雨水','2/19',330],['惊蛰','3/6',345]
+];
+const MAJOR_TERMS=new Set(['春分','夏至','秋分','冬至']);
+(function(){
+  const TR=49.5;
+  // 基准圆
+  dateGroup.add(circleLine(TR,0,0xffd24d,0.9,180));
+  // 刻度：每5°小刻度，节气处大刻度+名称日期标签
+  for(let lam=0;lam<360;lam+=5){
+    const isTerm=lam%15===0;
+    const a=EPOCH_EQ0+lam*D2R;
+    const d=new THREE.Vector3(Math.cos(a),0,-Math.sin(a));
+    const p1=d.clone().multiplyScalar(TR),p2=d.clone().multiplyScalar(TR+(isTerm?1.1:0.5));
+    const tick=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1,p2]),
+      new THREE.LineBasicMaterial({color:isTerm?0xffd24d:0x8f8a55,transparent:true,opacity:isTerm?1:0.8}));
+    dateGroup.add(tick);
+  }
+  TERMS.forEach(([name,date,lam])=>{
+    const a=EPOCH_EQ0+lam*D2R;
+    const lb=makeLabel(name+' '+date,{
+      color:MAJOR_TERMS.has(name)?'#7dffa8':'#ffd97a',fontSize:MAJOR_TERMS.has(name)?48:40,scale:0.036});
+    lb.position.set((TR+2.6)*Math.cos(a),1.4,-(TR+2.6)*Math.sin(a));
+    dateGroup.add(lb);
+  });
+})();
+// 太阳视位置标记（当前日期太阳所在的黄道点）+ 地球—太阳—黄道点连线
+const sunMarker=new THREE.Mesh(new THREE.SphereGeometry(0.85,20,14),
+  new THREE.MeshBasicMaterial({color:0xff3030}));
+scene.add(sunMarker);
+// 「视太阳」标签：太阳周年视运动在黄道上的当前位置
+const sunLabel=makeLabel('视太阳',{color:'#ff4040',fontSize:34,scale:0.036});
+sunLabel.position.y=2.2;
+sunMarker.add(sunLabel);
+const greenLine=new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({color:0x40ffb0,transparent:true,opacity:0.85}));
+scene.add(greenLine);
+
+/* ---------- 天球赤道环（红色，随地轴进动，交黄道于二分点） ---------- */
+const eqGroup=new THREE.Group();scene.add(eqGroup);
+(function(){
+  const R=54.2,pts=[];
+  for(let k=0;k<=180;k++){
+    const th=k/180*Math.PI*2;
+    pts.push(new THREE.Vector3(Math.sin(th)*Math.cos(TILT)*R,-Math.sin(th)*Math.sin(TILT)*R,Math.cos(th)*R));
+  }
+  eqGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color:0xff5050,transparent:true,opacity:0.95})));
+  const lb=makeLabel('天赤道',{color:'#ff8a8a',fontSize:28,scale:0.03});
+  lb.position.set(Math.cos(TILT)*R,-Math.sin(TILT)*R,0);lb.position.multiplyScalar(1.02);lb.position.y+=1.6;
+  eqGroup.add(lb);
+})();
+
+/* ---------- 天球网格（以黄道为基圈：黄纬圈 + 黄经线，固定于黄道坐标系） ---------- */
+const skyGrid=new THREE.Group();scene.add(skyGrid);
+(function(){
+  const SR=54.35,seg=90;
+  // 黄道坐标：黄经 λ(°)、黄纬 β(°) → 天球面点（与 sph() 同一约定，黄极为 +Y）
+  function pt(lamDeg,betaDeg){
+    const a=EPOCH_EQ0+lamDeg*D2R,b=betaDeg*D2R;
+    return new THREE.Vector3(Math.cos(b)*Math.cos(a),Math.sin(b),-Math.cos(b)*Math.sin(a)).multiplyScalar(SR);
+  }
+  // 共享着色器材质：正面实线，天球背面自动变为短虚线并减淡
+  const gridMat=new THREE.ShaderMaterial({
+    uniforms:{
+      uColor:{value:new THREE.Color(0xaeb6c9)},
+      uFrontA:{value:0.40},   // 正面不透明度
+      uBackA:{value:0.22},    // 背面不透明度
+      uDashLen:{value:2.4}    // 背面虚线周期（场景单位）
+    },
+    vertexShader:`
+      attribute float aDist;
+      varying float vDist; varying float vFacing;
+      void main(){
+        vec4 wp=modelMatrix*vec4(position,1.0);
+        // 天球心在场景原点：法向=位置方向，朝向相机为正
+        vFacing=dot(normalize(wp.xyz),normalize(cameraPosition-wp.xyz));
+        vDist=aDist;
+        gl_Position=projectionMatrix*viewMatrix*wp;
+      }`,
+    fragmentShader:`
+      uniform vec3 uColor; uniform float uFrontA,uBackA,uDashLen;
+      varying float vDist; varying float vFacing;
+      void main(){
+        float back=1.0-smoothstep(-0.02,0.02,vFacing);
+        float dash=step(0.45,fract(vDist/uDashLen)); // 短虚线
+        float a=mix(uFrontA,uBackA,back)*mix(1.0,dash,back);
+        if(a<0.02) discard;
+        gl_FragColor=vec4(uColor,a);
+      }`,
+    transparent:true,depthWrite:false
+  });
+  // 添加带弧长参数的网格线（供虚线计算）
+  function addGridLine(pts){
+    const d=[0];
+    for(let i=1;i<pts.length;i++)d.push(d[i-1]+pts[i].distanceTo(pts[i-1]));
+    const g=new THREE.BufferGeometry().setFromPoints(pts);
+    g.setAttribute('aDist',new THREE.Float32BufferAttribute(d,1));
+    skyGrid.add(new THREE.Line(g,gridMat));
+  }
+  // 黄纬圈：每 15° 一条（±15°~±75°，平行于黄道；β=0 即黄色黄道大圆，已单独绘制）
+  [-75,-60,-45,-30,-15,15,30,45,60,75].forEach(b2=>{
+    const pts=[];for(let k=0;k<=seg;k++)pts.push(pt(k/seg*360,b2));
+    addGridLine(pts);
+  });
+  // 黄经线：每 15°（共 24 条，过南北黄极）
+  for(let h=0;h<24;h++){
+    const pts=[];for(let b=-87;b<=87;b+=1.5)pts.push(pt(h*15,b));
+    addGridLine(pts);
+  }
+})();
+
+/* ---------- 状态与交互 ---------- */
+const NOW_YEAR=new Date().getFullYear();  // 当前真实年份（默认时间与复位目标）
+const YEAR0=-3000;                        // 周期进度时间起点：公元前 3000 年
+let tYears=NOW_YEAR-EPOCH;               // 距 2000 年的年数（默认当前年份）
+let playing=true;
+let yearsPerSec=0.1;   // 模拟年/秒（默认 0.1，可观察公转）
+let lastT=Date.now();
+
+const $=id=>document.getElementById(id);
+$('btnPlay').onclick=()=>{playing=!playing;$('btnPlay').textContent=playing?'⏸ 暂停':'▶ 播放';};
+$('btnReset').onclick=()=>{tYears=NOW_YEAR-EPOCH;};  // 复位：回到当前年份
+$('speed').oninput=e=>{
+  const v=+e.target.value;                 // 0..100 对数映射 0.05..300 年/秒
+  yearsPerSec=Math.pow(0.05,1-v/100)*Math.pow(300,v/100);
+  $('speedTxt').textContent=(yearsPerSec<1?yearsPerSec.toFixed(2):yearsPerSec.toFixed(1))+' 年/秒';
+};
+$('speed').oninput({target:$('speed')});
+$('btnSlow').onclick=()=>{$('speed').value=16;$('speed').oninput({target:$('speed')});};
+$('btnFast').onclick=()=>{$('speed').value=87;$('speed').oninput({target:$('speed')});};
+
+// 周期进度滑动条：0 → 公元前 3000 年，1 → 公元 22800 年（一个完整岁差周期）
+let scrubbing=false;
+const CYCLE_MAX=PRECESS_YEARS;
+const CYCLE_T0=YEAR0-EPOCH;   // 滑条 0 点对应的 tYears（-5000）
+$('cycle').addEventListener('pointerdown',()=>{scrubbing=true;playing=false;$('btnPlay').textContent='▶ 播放';});
+addEventListener('pointerup',()=>{scrubbing=false;});
+$('cycle').oninput=e=>{
+  const frac=+e.target.value/1000;          // 0..1 → 一个完整周期
+  tYears=CYCLE_T0+frac*CYCLE_MAX;
+  const year=Math.round(EPOCH+tYears);
+  $('cycleTxt').textContent=Math.round(frac*CYCLE_MAX)+' / '+CYCLE_MAX+' 年（'+(frac*100).toFixed(1)+'%）· '+
+    (year<0?'公元前 '+(-year):'公元 '+year)+' 年';
+};
+// 初始位置：当前年份
+{
+  const frac=((NOW_YEAR-EPOCH)-CYCLE_T0)/CYCLE_MAX;
+  $('cycle').value=Math.round(frac*1000);
+  $('cycle').oninput({target:$('cycle')});
+}
+
+function norm(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;}
+
+function updateInfo(){
+  const year=Math.round(EPOCH+tYears);
+  const yTxt=year<0?'公元前 '+(-year)+' 年':'公元 '+year+' 年';
+  $('iYear').textContent=yTxt;
+  const precDeg=((-tYears/PRECESS_YEARS)*360)%360;
+  $('iPrec').textContent=(((precDeg+540)%360)-180).toFixed(1)+'°';
+  // 春分点黄经（相对恒星背景，向西递减；0° 为 白羊/双鱼 交界）
+  const eqLon=(((-tYears/PRECESS_YEARS)*360)%360+360)%360;
+  const signs=['白羊','金牛','双子','巨蟹','狮子','室女','天秤','天蝎','人马','摩羯','宝瓶','双鱼'];
+  const si=Math.floor(eqLon/30);
+  $('iEq').textContent=eqLon.toFixed(1)+'°（'+signs[si]+'座区间）';
+  // 最近北极星
+  const poleAz=-2*Math.PI*tYears/PRECESS_YEARS;
+  let best=null,bd=1e9;
+  POLE_STARS.forEach(s=>{const d=Math.abs(norm(s.az-poleAz));if(d<bd){bd=d;best=s;}});
+  const sep=bd*180/Math.PI;
+  const el=$('iStar');
+  if(sep<6){
+    el.innerHTML='当前北极星：<b>'+best.name+'</b>（偏离天极 '+sep.toFixed(1)+'°）';
+    el.style.background='#d4edda';el.style.borderLeftColor='#28a745';
+  }else{
+    el.innerHTML='天极附近无亮星 · 距「'+best.name+'」尚有 '+sep.toFixed(0)+'°';
+    el.style.background='#f8d7da';el.style.borderLeftColor='#dc3545';
+  }
+}
+
+/* ---------- 动画循环 ---------- */
+function animate(){
+  requestAnimationFrame(animate);
+  const now=Date.now();
+  const dt=Math.min((now-lastT)/1000,0.1);
+  lastT=now;
+
+  if(playing){ tYears+=yearsPerSec*dt; }
+  // 速度=模拟年/秒：低速看公转与四季，高速看岁差（25800年一圈）
+
+  // 地球位置：从黄道北极俯视逆时针公转（向东，真实方向）
+  // 初始相位 a(0)=+90°，使 t=0 时太阳恰位于春分点方向（春分瞬间）
+  const orbA=2*Math.PI*tYears + Math.PI/2;
+  const precA=-2*Math.PI*tYears/PRECESS_YEARS;       // 岁差：西行（方位角随时间递减）
+  earthPivot.position.set(ORBIT_R*Math.cos(orbA),0,-ORBIT_R*Math.sin(orbA));
+  precessNode.rotation.y=precA;   // rotation.y=θ 使方位角增加 θ（逆时针）；precA 递减 → 地轴西行进动 ✓
+  earth.rotation.y+=1.2*dt; // 自转（示意速度）：rotation.y 增大 = 俯视逆时针 = 真实自转方向 ✓
+
+  // 春分点：随岁差相对恒星西退；几何上春分点位于天极投影以西 90°（NCP 黄经≈90°，春分点 λ=0）
+  const eqAz=EPOCH_EQ0+precA;
+  equinoxGroup.position.set(ORBIT_R*Math.cos(eqAz),0,-ORBIT_R*Math.sin(eqAz));
+  arrow.rotation.y=eqAz-Math.PI/2; // 箭头指向西退切线方向
+  eqDiamond.rotation.y+=dt*2;
+
+  // 地球—春分点连线
+  const p=eqLink.geometry.attributes.position;
+  p.setXYZ(0,earthPivot.position.x,0.2,earthPivot.position.z);
+  p.setXYZ(1,equinoxGroup.position.x,0.2,equinoxGroup.position.z);
+  p.needsUpdate=true;
+  eqLink.computeLineDistances();
+
+  // 天极射线：沿当前地轴方向延伸到天球（与场景层级一致：R_y(precA)·R_z(−TILT)·Y）
+  const axisDir=new THREE.Vector3(0,1,0).applyEuler(new THREE.Euler(0,0,-TILT))
+                  .applyEuler(new THREE.Euler(0,precA,0));
+  // 视角固定：以黄道面为基准水平面（黄极为天顶），不再随天极重定向
+  const q=poleRay.geometry.attributes.position;
+  q.setXYZ(0,0,0,0);
+  q.setXYZ(1,axisDir.x*SKY_R,axisDir.y*SKY_R,axisDir.z*SKY_R);
+  q.needsUpdate=true;
+  poleRay.computeLineDistances();
+
+  // 可见性
+  precessGroup.visible=tg('tgAxis');
+  axisLine.visible=axisLabel.visible=northTip.visible=southTip.visible=tg('tgAxis');
+  equinoxGroup.visible=eqLink.visible=tg('tgEquinox');
+  poleTrace.visible=poleRay.visible=tg('tgPole');
+  poleStarObjs.forEach(o=>o.visible=tg('tgPole'));
+  zodiacGroup.visible=tg('tgZodiac');
+  gridGroup.visible=true;                                   // 地球经纬网常显
+  dateGroup.visible=sunMarker.visible=greenLine.visible=tg('tgDate');
+  skyGrid.visible=true; eqGroup.visible=true;               // 赤道网格与天赤道常显
+
+  // 节气环与天赤道随岁差旋转（附着于二分点）
+  dateGroup.rotation.y=precA;
+  eqGroup.rotation.y=precA;   // 黄道网格固定于黄道坐标系，不随岁差旋转
+
+  // 黄道带渲染面随相机位置切换：相机在天球外 → BackSide（单层外面）；进入天球内（如中心视角）→ FrontSide（带面照样渲染黄色）
+  // 黄道带渲染面随相机位置切换：相机在天球外 → BackSide（单层外面）；进入天球内（如中心视角）→ FrontSide（带面照样渲染黄色）
+  if(bandFillRef)bandFillRef.material.side=(camera.position.length()>54)?THREE.BackSide:THREE.FrontSide;
+
+  // 太阳视位置：黄道点标记 + 地球—太阳—黄道点绿色连线
+  const sunAz=orbA+Math.PI;
+  const sp=new THREE.Vector3(49.5*Math.cos(sunAz),0,-49.5*Math.sin(sunAz));
+  sunMarker.position.copy(sp);
+  const gp=greenLine.geometry.attributes.position;
+  gp.setXYZ(0,earthPivot.position.x,0,earthPivot.position.z);
+  gp.setXYZ(1,0,0,0);
+  gp.setXYZ(2,sp.x,0,sp.z);
+  gp.needsUpdate=true;
+
+  controls.update();
+  renderer.render(scene,camera);
+  updateInfo();
+
+  // 周期进度条与时间同步（正在拖动时不覆盖）；进度以公元前 3000 年为 0 点
+  if(!scrubbing){
+    const cyc=((tYears-CYCLE_T0)%CYCLE_MAX+CYCLE_MAX)%CYCLE_MAX;
+    $('cycle').value=Math.round(cyc/CYCLE_MAX*1000);
+    const cy=Math.round(EPOCH+tYears);
+    $('cycleTxt').textContent=Math.round(cyc)+' / '+CYCLE_MAX+' 年（'+(cyc/CYCLE_MAX*100).toFixed(1)+'%）· '+
+      (cy<0?'公元前 '+(-cy):'公元 '+cy)+' 年';
+  }
+}
+
+function tg(id){return $(id).checked;}
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+/* ---------- 视角：以黄道面为基准水平面（黄极为天顶） ---------- */
+// 场景坐标本身即以黄道面为 XZ 平面、黄道极为 +Y：不做额外旋转。
+// 黄道充当"基圈"，地轴倾斜 23.44° 并随岁差绕黄极进动，红色天赤道相对黄道倾斜 23.44°。
+const rootGroup=new THREE.Group();
+[...scene.children].forEach(o=>rootGroup.add(o));
+scene.add(rootGroup);
+
+animate();
+})();
+</script>
+</body>
+</html>
