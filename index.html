@@ -11,7 +11,7 @@
     position:fixed;z-index:10;background:rgba(255,255,255,.94);color:#1c2333;
     border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13px;line-height:1.55;
   }
-  #ctrl{top:14px;left:14px;width:252px;padding:12px 14px;}
+  #ctrl{top:14px;left:14px;width:320px;padding:12px 14px;}
   #ctrl h1{font-size:15px;margin:0 0 6px;color:#0f1b3d;}
   #ctrl .sub{font-size:11px;color:#5a6478;margin-bottom:8px;}
   .row{display:flex;align-items:center;gap:8px;margin:7px 0;}
@@ -24,8 +24,8 @@
   button.gray{background:#8a93a8;}
   button.gray:hover{background:#6f7890;}
   input[type=range]{flex:1.2;accent-color:#2b5fd9;}
-  .toggles{margin-top:8px;border-top:1px solid #dde2ec;padding-top:6px;}
-  .toggles label{display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer;font-size:12.5px;}
+  .toggles{margin-top:8px;border-top:1px solid #dde2ec;padding-top:6px;display:grid;grid-template-columns:1fr 1fr;column-gap:12px;}
+  .toggles label{display:flex;align-items:center;gap:5px;margin:4px 0;cursor:pointer;font-size:12px;white-space:nowrap;}
   .toggles input{accent-color:#2b5fd9;}
   #info{bottom:14px;left:14px;width:320px;padding:12px 14px;}
   #info h2{margin:0 0 6px;font-size:14px;color:#0f1b3d;}
@@ -37,7 +37,7 @@
   .legend .it{display:flex;align-items:center;gap:7px;margin:4px 0;}
   .dot{width:11px;height:11px;border-radius:50%;flex:none;}
   .note{font-size:11px;color:#5a6478;margin-top:6px;}
-  #title{top:14px;right:14px;padding:8px 14px;text-align:right;max-width:262px;}
+  #title{top:14px;right:14px;padding:8px 14px;text-align:center;max-width:262px;}
   #title h1{margin:0;font-size:17px;color:#0f1b3d;}
   #title p{margin:2px 0 0;font-size:11px;color:#5a6478;}
   @media (max-width:900px){#legend,#title{display:none;}}
@@ -64,8 +64,19 @@
     <span id="speedTxt" style="font-size:12px;min-width:74px;text-align:right"></span>
   </div>
   <div class="row" style="gap:6px">
-    <button id="btnSlow" class="gray" style="flex:1;padding:5px 4px;font-size:12px">看公转 0.2年/秒</button>
+    <button id="btnSlow" class="gray" style="flex:1;padding:5px 4px;font-size:12px">看公转 0.05年/秒</button>
     <button id="btnFast" class="gray" style="flex:1;padding:5px 4px;font-size:12px">看岁差 100年/秒</button>
+  </div>
+  <div class="row" style="gap:6px">
+    <button class="gray term-btn" data-term="0"   style="flex:1;padding:5px 2px;font-size:12px">春分</button>
+    <button class="gray term-btn" data-term="90"  style="flex:1;padding:5px 2px;font-size:12px">夏至</button>
+    <button class="gray term-btn" data-term="180" style="flex:1;padding:5px 2px;font-size:12px">秋分</button>
+    <button class="gray term-btn" data-term="270" style="flex:1;padding:5px 2px;font-size:12px">冬至</button>
+  </div>
+  <div class="row">
+    <span style="font-size:12px">地球大小</span>
+    <input type="range" id="earthSize" min="0.5" max="10" step="0.1" value="1">
+    <span id="earthSizeTxt" style="font-size:12px;min-width:40px;text-align:right">1.0×</span>
   </div>
   <div style="border-top:1px solid #dde2ec;margin:8px 0 4px;padding-top:8px">
     <div class="row" style="margin:2px 0">
@@ -102,7 +113,7 @@
   <h3>图例</h3>
   <div class="it"><span class="dot" style="background:#ffd23e"></span>太阳（黄道面中心）</div>
   <div class="it"><span class="dot" style="background:#3f8cff"></span>地球（自转轴倾斜 23.44°）</div>
-  <div class="it"><span class="dot" style="background:#ff5252"></span>春分点（♈，沿黄道西退）</div>
+  <div class="it"><span class="dot" style="background:#ff5252"></span>春分点（沿黄道西退）</div>
   <div class="it"><span class="dot" style="background:#b06cff"></span>天极轨迹圈（半径 23.44°）</div>
   <div class="it"><span class="dot" style="background:#fff"></span>黄道（地球公转轨道面）</div>
 </div>
@@ -137,8 +148,12 @@ app.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0b0e1a);
 
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,600);
-// 默认位于天球（半径≈54.5）之外：距离≈150，视场恰好容纳整个天球
+// 正交投影（平行光成像）：天球及各圆环不发生近大远小的透视畸变；
+// 文字标注由 animate 中按到相机的距离手动缩放，仍保留"远小近大"的纵深感
+const VIEW_H=95;   // 正交视域半高（恰好容纳整个天球及标注）
+let camAspect=innerWidth/innerHeight;
+const camera=new THREE.OrthographicCamera(-VIEW_H*camAspect,VIEW_H*camAspect,VIEW_H,-VIEW_H,0.1,600);
+// 默认位于天球（半径≈54.5）之外：距离≈150，视域恰好容纳整个天球
 camera.position.set(0,58,138);
 
 const controls=new THREE.OrbitControls(camera,renderer.domElement);
@@ -150,27 +165,59 @@ const sunLight=new THREE.PointLight(0xfff2cc,1.6,0,2);
 scene.add(sunLight);
 
 /* ---------- 工具：文字精灵 ---------- */
+const labelSprites=[];   // 所有文字标注（正交投影下按距离手动缩放，保持远小近大）
 function makeLabel(text,opt){
   opt=opt||{};
-  const fs=opt.fontSize||30, pad=16;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:null,transparent:true,depthTest:false}));
   const cv=document.createElement('canvas');
-  const ctx=cv.getContext('2d');
-  ctx.font=fs+'px "Microsoft YaHei", sans-serif';
-  const w=Math.ceil(ctx.measureText(text).width)+pad*2;
-  cv.width=w;cv.height=fs+pad;
-  const c2=cv.getContext('2d');
-  c2.font=fs+'px "Microsoft YaHei", sans-serif';
-  c2.textAlign='center';c2.textBaseline='middle';
-  c2.lineWidth=6;c2.strokeStyle=opt.stroke||'rgba(0,0,0,.85)';
-  c2.strokeText(text,w/2,cv.height/2);
-  c2.fillStyle=opt.color||'#ffffff';
-  c2.fillText(text,w/2,cv.height/2);
-  const tex=new THREE.CanvasTexture(cv);tex.minFilter=THREE.LinearFilter;
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
-  const sp=new THREE.Sprite(mat);
-  const s=opt.scale||0.02;
-  sp.scale.set(w*s,cv.height*s,1);
+  let tex=null;
+  // 绘制/重绘函数：sp.userData.setText(新文字) 可动态更新内容（节气日期随年份变化用）。
+  // 画布与纹理对象复用（仅重绘 + needsUpdate），避免拖动进度条时频繁分配 GPU 纹理导致卡顿。
+  function draw(t){
+    const fs=opt.fontSize||30, pad=16;
+    const ctx=cv.getContext('2d');
+    ctx.font=fs+'px "Microsoft YaHei", sans-serif';
+    const w=Math.ceil(ctx.measureText(t).width)+pad*2;
+    cv.width=w;cv.height=fs+pad;
+    const c2=cv.getContext('2d');
+    c2.font=fs+'px "Microsoft YaHei", sans-serif';
+    c2.textAlign='center';c2.textBaseline='middle';
+    c2.lineWidth=6;c2.strokeStyle=opt.stroke||'rgba(0,0,0,.85)';
+    c2.strokeText(t,w/2,cv.height/2);
+    c2.fillStyle=opt.color||'#ffffff';
+    c2.fillText(t,w/2,cv.height/2);
+    if(!tex){tex=new THREE.CanvasTexture(cv);tex.minFilter=THREE.LinearFilter;sp.material.map=tex;}
+    else tex.needsUpdate=true;
+    const s=opt.scale||0.02;
+    sp.scale.set(w*s,cv.height*s,1);
+    sp.userData.bx=w*s;sp.userData.by=cv.height*s;   // 基准尺寸（供距离缩放）
+  }
+  draw(text);
+  sp.userData.setText=draw;
+  labelSprites.push(sp);
   return sp;
+}
+
+/* ---------- 节气日期计算（演示模型内精准） ---------- */
+// 模型：太阳沿黄道均匀行度，回归年 365.2422 天，春分锚定于 3 月 20 日。
+// 节气 k 距春分黄经 λ → 距春分天数 = λ/360×365.2422（λ>180° 时取负，为同年中早于春分的节气），
+// 再按格里高利历（闰年规则，含公元前外推）归一化到具体月日。
+const TROPICAL_YEAR=365.2422;
+const MONTH_DAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
+function gLeap(y){
+  const a=((y%4)+4)%4,b=((y%100)+100)%100,c=((y%400)+400)%400;
+  return (a===0&&b!==0)||c===0;
+}
+function mLen(y,m){return (m===2&&gLeap(y))?29:MONTH_DAYS[m-1];}
+function termDateStr(y,lam){
+  let off=Math.round((lam>180?lam-360:lam)/360*TROPICAL_YEAR);
+  let m=3,d=20+off,guard=0;
+  while(guard++<24){
+    if(d>mLen(y,m)){d-=mLen(y,m);m++;if(m>12){m=1;y++;}}
+    else if(d<1){m--;if(m<1){m=12;y--;}d+=mLen(y,m);}
+    else break;
+  }
+  return m+'/'+d;
 }
 
 /* ---------- 恒星背景 ---------- */
@@ -236,7 +283,7 @@ const earth=new THREE.Mesh(new THREE.SphereGeometry(0.62,64,48),
   new THREE.MeshStandardMaterial({color:0x3f8cff,roughness:0.55,metalness:0.05}));
 tiltNode.add(earth);
 
-// 卫星影像贴图（NASA Blue Marble），多源回退；加载成功后替换纯色
+// 海陆分布贴图：以卫星影像为底，按参考图配色重绘为扁平双色——海洋鲜蓝、陆地黄绿（含南极/格陵兰）
 (function(){
   const urls=[
     'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg',
@@ -248,17 +295,64 @@ tiltNode.add(earth);
   (function tryLoad(i){
     if(i>=urls.length)return; // 全部失败则保留纯色球体
     loader.load(urls[i],tex=>{
-      tex.encoding=THREE.sRGBEncoding;
-      tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-      earth.material.map=tex;
-      // 参考教学地球仪配色：整体蓝色调（乘性着色，海洋深蓝、陆地偏蓝）
-      earth.material.color.set(0x8cb8ff);
-      earth.material.needsUpdate=true;
-      const wf=earth.children.find(o=>o.material&&o.material.wireframe);
-      if(wf)earth.remove(wf);
+      try{
+        const W=1024,H=512;
+        const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+        const cx=cv.getContext('2d');
+        cx.drawImage(tex.image,0,0,W,H);
+        const id=cx.getImageData(0,0,W,H),d=id.data;
+        // 海洋：蓝色通道显著占优 → 鲜蓝；其余（陆地/冰盖）→ 黄绿
+        for(let p=0;p<d.length;p+=4){
+          const r=d[p],g=d[p+1],b=d[p+2];
+          if(b>r+15&&b>g+5){d[p]=0x2b;d[p+1]=0x70;d[p+2]=0xc8;}
+          else{d[p]=0xb5;d[p+1]=0xd4;d[p+2]=0x78;}
+          d[p+3]=255;
+        }
+        cx.putImageData(id,0,0);
+        const flat=new THREE.CanvasTexture(cv);
+        flat.encoding=THREE.sRGBEncoding;
+        flat.anisotropy=renderer.capabilities.getMaxAnisotropy();
+        earth.material.map=flat;
+        earth.material.color.set(0xffffff);
+        earth.material.needsUpdate=true;
+        const wf=earth.children.find(o=>o.material&&o.material.wireframe);
+        if(wf)earth.remove(wf);
+      }catch(e){ // 画布跨域污染时退回整体乘性着色
+        tex.encoding=THREE.sRGBEncoding;
+        earth.material.map=tex;
+        earth.material.color.set(0x9fb8e8);
+        earth.material.needsUpdate=true;
+      }
     },undefined,()=>tryLoad(i+1));
   })(0);
 })();
+
+/* ---------- 昼夜半球：夜半球深色罩（晨昏线垂直太阳方向，精准昼夜分割） ---------- */
+// 太阳恒位于场景原点：世界坐标下片段法向与"指向太阳方向"的点积决定昼夜，
+// 晨昏线为过地心、垂直日地连线的大圆，随地球公转/地轴倾斜实时精准变化。
+const nightShell=new THREE.Mesh(
+  new THREE.SphereGeometry(0.635,64,48),
+  new THREE.ShaderMaterial({
+    vertexShader:`
+      varying vec3 vN; varying vec3 vWp;
+      void main(){
+        vN=normalize(mat3(modelMatrix)*normal);
+        vec4 wp=modelMatrix*vec4(position,1.0);
+        vWp=wp.xyz;
+        gl_Position=projectionMatrix*viewMatrix*wp;
+      }`,
+    fragmentShader:`
+      varying vec3 vN; varying vec3 vWp;
+      void main(){
+        float d=dot(normalize(vN),normalize(-vWp));  // 指向太阳（原点）的方向
+        float day=smoothstep(-0.03,0.03,d);          // 晨昏线小过渡带
+        gl_FragColor=vec4(0.01,0.02,0.06,0.78*(1.0-day));
+      }`,
+    transparent:true,depthWrite:false
+  })
+);
+nightShell.renderOrder=3;
+earth.add(nightShell);
 
 /* ---------- 地球经纬网 + 特殊纬线（随地表自转） ---------- */
 const gridGroup=new THREE.Group();earth.add(gridGroup);
@@ -310,29 +404,27 @@ precessGroup.add(coneSide);
 const coneLabel=makeLabel('岁差圆锥（25800 年一圈）',{color:'#ffc078',fontSize:20,scale:0.019});
 coneLabel.position.set(0,coneY+0.6,0);precessGroup.add(coneLabel);
 
-/* ---------- 春分点标记（沿黄道西退） ---------- */
+/* ---------- 春分点标记（标注在天球面上，沿黄道西退；原黄道面内圈位置不再显示） ---------- */
 const equinoxGroup=new THREE.Group();scene.add(equinoxGroup);
-const eqDiamond=new THREE.Mesh(new THREE.OctahedronGeometry(0.34),
+const eqDiamond=new THREE.Mesh(new THREE.OctahedronGeometry(0.9),
   new THREE.MeshBasicMaterial({color:0xff5252}));
-eqDiamond.position.y=0.2;equinoxGroup.add(eqDiamond);
-const eqLabel=makeLabel('春分点 ♈',{color:'#ff7b7b',fontSize:28,scale:0.03});
-eqLabel.position.y=1.0;equinoxGroup.add(eqLabel);
+eqDiamond.position.y=1.2;equinoxGroup.add(eqDiamond);
 
-// 西退方向箭头（切向）
+// 西退方向箭头（切向，随标记一起标注在天球面上）
 const arrow=new THREE.Group();equinoxGroup.add(arrow);
-const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.9,8),
+const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,2.2,8),
   new THREE.MeshBasicMaterial({color:0xffa94d}));
-shaft.rotation.z=Math.PI/2;shaft.position.x=0.75;arrow.add(shaft);
-const head=new THREE.Mesh(new THREE.ConeGeometry(0.13,0.3,10),
+shaft.rotation.z=Math.PI/2;shaft.position.x=1.85;arrow.add(shaft);
+const head=new THREE.Mesh(new THREE.ConeGeometry(0.32,0.75,10),
   new THREE.MeshBasicMaterial({color:0xffa94d}));
-head.rotation.z=-Math.PI/2;head.position.x=1.32;arrow.add(head);
-const arrowLabel=makeLabel('西退 50.29″/年',{color:'#ffc078',fontSize:24,scale:0.024});
-arrowLabel.position.set(0.7,0.55,0);arrow.add(arrowLabel);
+head.rotation.z=-Math.PI/2;head.position.x=3.3;arrow.add(head);
+const arrowLabel=makeLabel('西退 50.29″/年',{color:'#ffc078',fontSize:38,scale:0.042});
+arrowLabel.position.set(1.7,-1.8,0);arrow.add(arrowLabel);   // 位于春分点八面体符号一侧下方
 
-// 地球—春分点示意连线
+// 地球—春分点（天球面）示意连线
 const eqLink=new THREE.Line(
   new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]),
-  new THREE.LineDashedMaterial({color:0xff7b7b,dashSize:0.35,gapSize:0.25,transparent:true,opacity:0.7}));
+  new THREE.LineDashedMaterial({color:0xff7b7b,dashSize:1.2,gapSize:0.8,transparent:true,opacity:0.7}));
 scene.add(eqLink);
 
 /* ---------- 天极轨迹与北极星更替 ---------- */
@@ -513,6 +605,7 @@ const TERMS=[
   ['大寒','1/20',300],['立春','2/4',315],['雨水','2/19',330],['惊蛰','3/6',345]
 ];
 const MAJOR_TERMS=new Set(['春分','夏至','秋分','冬至']);
+const termLabels=[];   // 节气标签引用（日期随模拟年份动态更新）
 (function(){
   const TR=49.5;
   // 基准圆
@@ -527,12 +620,14 @@ const MAJOR_TERMS=new Set(['春分','夏至','秋分','冬至']);
       new THREE.LineBasicMaterial({color:isTerm?0xffd24d:0x8f8a55,transparent:true,opacity:isTerm?1:0.8}));
     dateGroup.add(tick);
   }
-  TERMS.forEach(([name,date,lam])=>{
+  // 节气名称+日期：日期由 termDateStr 按当前模拟年份计算（首帧在 animate 中填充）
+  TERMS.forEach(([name,,lam])=>{
     const a=EPOCH_EQ0+lam*D2R;
-    const lb=makeLabel(name+' '+date,{
+    const lb=makeLabel(name+' —',{
       color:MAJOR_TERMS.has(name)?'#7dffa8':'#ffd97a',fontSize:MAJOR_TERMS.has(name)?48:40,scale:0.036});
     lb.position.set((TR+2.6)*Math.cos(a),1.4,-(TR+2.6)*Math.sin(a));
     dateGroup.add(lb);
+    termLabels.push({lb,name,lam});
   });
 })();
 // 太阳视位置标记（当前日期太阳所在的黄道点）+ 地球—太阳—黄道点连线
@@ -558,7 +653,7 @@ const eqGroup=new THREE.Group();scene.add(eqGroup);
   }
   eqGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
     new THREE.LineBasicMaterial({color:0xff5050,transparent:true,opacity:0.95})));
-  const lb=makeLabel('天赤道',{color:'#ff8a8a',fontSize:28,scale:0.03});
+  const lb=makeLabel('天赤道',{color:'#ff8a8a',fontSize:46,scale:0.048});
   lb.position.set(Math.cos(TILT)*R,-Math.sin(TILT)*R,0);lb.position.multiplyScalar(1.02);lb.position.y+=1.6;
   eqGroup.add(lb);
 })();
@@ -628,6 +723,8 @@ const YEAR0=-3000;                        // 周期进度时间起点：公元�
 let tYears=NOW_YEAR-EPOCH;               // 距 2000 年的年数（默认当前年份）
 let playing=true;
 let yearsPerSec=0.1;   // 模拟年/秒（默认 0.1，可观察公转）
+let lastTermYear=null; // 上次刷新节气日期的年份（年份变化时才重绘，避免每帧重建纹理）
+let lastTermT=-1e9;    // 上次节气重绘时间戳（拖动时节流，松开手立即刷新）
 let lastT=Date.now();
 
 const $=id=>document.getElementById(id);
@@ -639,15 +736,39 @@ $('speed').oninput=e=>{
   $('speedTxt').textContent=(yearsPerSec<1?yearsPerSec.toFixed(2):yearsPerSec.toFixed(1))+' 年/秒';
 };
 $('speed').oninput({target:$('speed')});
-$('btnSlow').onclick=()=>{$('speed').value=16;$('speed').oninput({target:$('speed')});};
+$('btnSlow').onclick=()=>{$('speed').value=0;$('speed').oninput({target:$('speed')});};   // 滑条 0 点即 0.05 年/秒（对数映射下限）
 $('btnFast').onclick=()=>{$('speed').value=87;$('speed').oninput({target:$('speed')});};
+
+// 春分/夏至/秋分/冬至按钮：跳转到「周期进度当前所在年份」内该节气的时刻（并暂停便于观察）
+// 解 2πt ≡ λ+precA (mod 2π) 得同名气隔 step=25800/25801 年；取距当前年份中点最近的解
+function termTimeInYear(lamDeg,y){
+  const tRef=y-EPOCH;
+  const base=(lamDeg/360)*(PRECESS_YEARS/(PRECESS_YEARS+1));
+  const step=PRECESS_YEARS/(PRECESS_YEARS+1);
+  return base+Math.round((tRef-base)/step)*step;
+}
+document.querySelectorAll('.term-btn').forEach(b=>{
+  b.onclick=()=>{
+    const yNow=Math.round(EPOCH+tYears);
+    tYears=termTimeInYear(+b.dataset.term,yNow);
+    playing=false;$('btnPlay').textContent='▶ 播放';
+  };
+});
+
+// 地球大小滑动条：同步缩放地球（含贴图与经纬网）、地轴与岁差圆锥
+$('earthSize').oninput=e=>{
+  const v=+e.target.value;
+  tiltNode.scale.setScalar(v);       // 地球 + 地轴（含轴端与标签）
+  precessGroup.scale.setScalar(v);   // 岁差圆锥随轴长同步
+  $('earthSizeTxt').textContent=v.toFixed(1)+'×';
+};
 
 // 周期进度滑动条：0 → 公元前 3000 年，1 → 公元 22800 年（一个完整岁差周期）
 let scrubbing=false;
 const CYCLE_MAX=PRECESS_YEARS;
 const CYCLE_T0=YEAR0-EPOCH;   // 滑条 0 点对应的 tYears（-5000）
 $('cycle').addEventListener('pointerdown',()=>{scrubbing=true;playing=false;$('btnPlay').textContent='▶ 播放';});
-addEventListener('pointerup',()=>{scrubbing=false;});
+addEventListener('pointerup',()=>{scrubbing=false;lastTermT=-1e9;});   // 松开手：下一帧立即刷新节气日期到最终年份
 $('cycle').oninput=e=>{
   const frac=+e.target.value/1000;          // 0..1 → 一个完整周期
   tYears=CYCLE_T0+frac*CYCLE_MAX;
@@ -708,9 +829,10 @@ function animate(){
   precessNode.rotation.y=precA;   // rotation.y=θ 使方位角增加 θ（逆时针）；precA 递减 → 地轴西行进动 ✓
   earth.rotation.y+=1.2*dt; // 自转（示意速度）：rotation.y 增大 = 俯视逆时针 = 真实自转方向 ✓
 
-  // 春分点：随岁差相对恒星西退；几何上春分点位于天极投影以西 90°（NCP 黄经≈90°，春分点 λ=0）
+  // 春分点：随岁差相对恒星西退，标注在天球面上（黄道与天球交线处）；几何上天极投影以西 90°
   const eqAz=EPOCH_EQ0+precA;
-  equinoxGroup.position.set(ORBIT_R*Math.cos(eqAz),0,-ORBIT_R*Math.sin(eqAz));
+  const EQ_R=SKY_R-0.5;   // 略微贴在天球面内侧
+  equinoxGroup.position.set(EQ_R*Math.cos(eqAz),0,-EQ_R*Math.sin(eqAz));
   arrow.rotation.y=eqAz-Math.PI/2; // 箭头指向西退切线方向
   eqDiamond.rotation.y+=dt*2;
 
@@ -746,6 +868,16 @@ function animate(){
   dateGroup.rotation.y=precA;
   eqGroup.rotation.y=precA;   // 黄道网格固定于黄道坐标系，不随岁差旋转
 
+  // 节气日期随模拟年份更新：计算该年份下各节气的模型精准日期并重绘黄道上的标签。
+  // 拖动进度条时以 ~100ms 节流刷新（年份高速掠过时仍持续跟随），松开手立即刷新到最终年份。
+  {
+    const yNow=Math.round(EPOCH+tYears);
+    if(yNow!==lastTermYear && now-lastTermT>100){
+      lastTermYear=yNow;lastTermT=now;
+      termLabels.forEach(o=>o.lb.userData.setText(o.name+' '+termDateStr(yNow,o.lam)));
+    }
+  }
+
   // 黄道带渲染面随相机位置切换：相机在天球外 → BackSide（单层外面）；进入天球内（如中心视角）→ FrontSide（带面照样渲染黄色）
   // 黄道带渲染面随相机位置切换：相机在天球外 → BackSide（单层外面）；进入天球内（如中心视角）→ FrontSide（带面照样渲染黄色）
   if(bandFillRef)bandFillRef.material.side=(camera.position.length()>54)?THREE.BackSide:THREE.FrontSide;
@@ -759,6 +891,15 @@ function animate(){
   gp.setXYZ(1,0,0,0);
   gp.setXYZ(2,sp.x,0,sp.z);
   gp.needsUpdate=true;
+
+  // 正交投影下手动模拟文字"远小近大"：按标签到相机的距离相对参考距离缩放
+  const dRef=camera.position.length();   // 相机到天球中心的距离作参考
+  labelSprites.forEach(sp=>{
+    if(!sp.visible)return;
+    sp.getWorldPosition(_wp);
+    const f=Math.max(0.35,Math.min(3,dRef/Math.max(1,_wp.distanceTo(camera.position))));
+    sp.scale.set(sp.userData.bx*f,sp.userData.by*f,1);
+  });
 
   controls.update();
   renderer.render(scene,camera);
@@ -776,8 +917,13 @@ function animate(){
 
 function tg(id){return $(id).checked;}
 
+const _wp=new THREE.Vector3();   // 复用的临时向量（文字距离缩放用）
+
 addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  camAspect=innerWidth/innerHeight;
+  camera.left=-VIEW_H*camAspect;camera.right=VIEW_H*camAspect;
+  camera.top=VIEW_H;camera.bottom=-VIEW_H;
+  camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
 
