@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>地球岁差 3D 演示 · 25800 年周期</title>
+<title>地球岁差 3D 演示 · 约25770 年周期（每年西退50.29″）</title>
 <style>
   html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#0b0e1a;}
   #app{width:100%;height:100%;}
@@ -49,7 +49,7 @@
 
 <div class="panel" id="title">
   <h1>地球岁差（进动）3D 演示</h1>
-  <p>视角：黄道面为基准水平面 · 地轴像陀螺一样摆动 · 周期约 25800 年 · 春分点沿黄道每年西退约 50.29″</p>
+  <p>视角：黄道面为基准水平面 · 地轴像陀螺一样摆动 · 周期约 25770 年 · 春分点沿黄道每年西退 50.29″</p>
 </div>
 
 <div class="panel" id="ctrl">
@@ -87,7 +87,7 @@
     </div>
     <div class="row" style="margin:2px 0;justify-content:space-between">
       <span style="font-size:11px;color:#5a6478">← 公元前 3000 年</span>
-      <span id="cycleTxt" style="font-size:11.5px;color:#0f1b3d;font-weight:600">0 / 25800 年（0%）</span>
+      <span id="cycleTxt" style="font-size:11.5px;color:#0f1b3d;font-weight:600">0 / 25770 年（0%）</span>
       <span style="font-size:11px;color:#5a6478">公元 22800 年 →</span>
     </div>
     <div class="note" style="margin:2px 0 0">从左到右拖动「周期进度」，手动演示一个完整岁差周期内地轴指向（天极）的变化。</div>
@@ -130,7 +130,9 @@ if(typeof THREE==='undefined'){
 }
 
 /* ---------- 常量 ---------- */
-const PRECESS_YEARS = 25800;          // 岁差周期（年）
+const PRECESS_RATE = 50.29;           // 春分点每年西退角秒（″/年）
+const PRECESS_YEARS = 1296000/PRECESS_RATE;   // 岁差周期（年）= 360°×3600″ ÷ 50.29″ ≈ 25770.4 年
+                                      // 保证地球每公转一周（1 年），春分点恰西退 50.29″
 const TILT = 23.44 * Math.PI/180;     // 黄赤交角
 const ORBIT_R = 10;                   // 地球公转轨道半径（场景单位）
 const SKY_R = 54.5;                   // 天球半径（天极轨迹圈投影在天球面上，与黄道带同球）
@@ -335,18 +337,19 @@ tiltNode.add(earth);
 const nightShell=new THREE.Mesh(
   new THREE.SphereGeometry(0.635,64,48),
   new THREE.ShaderMaterial({
+    uniforms:{ uSunDir:{value:new THREE.Vector3(1,0,0)} },
     vertexShader:`
-      varying vec3 vN; varying vec3 vWp;
+      varying vec3 vN;
       void main(){
         vN=normalize(mat3(modelMatrix)*normal);
-        vec4 wp=modelMatrix*vec4(position,1.0);
-        vWp=wp.xyz;
-        gl_Position=projectionMatrix*viewMatrix*wp;
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
       }`,
     fragmentShader:`
-      varying vec3 vN; varying vec3 vWp;
+      uniform vec3 uSunDir;
+      varying vec3 vN;
       void main(){
-        float d=dot(normalize(vN),normalize(-vWp));  // 指向太阳（原点）的方向
+        // uSunDir 每帧由 CPU 传入：地心指向太阳的精确单位向量（与地日连线一致）
+        float d=dot(normalize(vN),uSunDir);
         float day=smoothstep(-0.03,0.03,d);          // 晨昏线小过渡带
         gl_FragColor=vec4(0.01,0.02,0.06,0.78*(1.0-day));
       }`,
@@ -403,7 +406,7 @@ const coneSide=new THREE.Line(
   new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(coneR,coneY,0),new THREE.Vector3(0,0,0),new THREE.Vector3(-coneR,coneY,0)]),
   new THREE.LineBasicMaterial({color:0xffa94d,transparent:true,opacity:0.3}));
 precessGroup.add(coneSide);
-const coneLabel=makeLabel('岁差圆锥（25800 年一圈）',{color:'#ffc078',fontSize:20,scale:0.019});
+const coneLabel=makeLabel('岁差圆锥（约25770 年一圈）',{color:'#ffc078',fontSize:20,scale:0.019});
 coneLabel.position.set(0,coneY+0.6,0);precessGroup.add(coneLabel);
 
 /* ---------- 春分点标记（标注在天球面上，沿黄道西退；原黄道面内圈位置不再显示） ---------- */
@@ -742,7 +745,7 @@ $('btnSlow').onclick=()=>{$('speed').value=0;$('speed').oninput({target:$('speed
 $('btnFast').onclick=()=>{$('speed').value=87;$('speed').oninput({target:$('speed')});};
 
 // 春分/夏至/秋分/冬至按钮：跳转到「周期进度当前所在年份」内该节气的时刻（并暂停便于观察）
-// 解 2πt ≡ λ+precA (mod 2π) 得同名气隔 step=25800/25801 年；取距当前年份中点最近的解
+// 解 2πt ≡ λ+precA (mod 2π) 得同名气隔 step=PRECESS_YEARS/(PRECESS_YEARS+1) 年；取距当前年份中点最近的解
 function termTimeInYear(lamDeg,y){
   const tRef=y-EPOCH;
   const base=(lamDeg/360)*(PRECESS_YEARS/(PRECESS_YEARS+1));
@@ -775,7 +778,7 @@ $('cycle').oninput=e=>{
   const frac=+e.target.value/1000;          // 0..1 → 一个完整周期
   tYears=CYCLE_T0+frac*CYCLE_MAX;
   const year=Math.round(EPOCH+tYears);
-  $('cycleTxt').textContent=Math.round(frac*CYCLE_MAX)+' / '+CYCLE_MAX+' 年（'+(frac*100).toFixed(1)+'%）· '+
+  $('cycleTxt').textContent=Math.round(frac*CYCLE_MAX)+' / '+Math.round(CYCLE_MAX)+' 年（'+(frac*100).toFixed(1)+'%）· '+
     (year<0?'公元前 '+(-year):'公元 '+year)+' 年';
 };
 // 初始位置：当前年份
@@ -821,7 +824,7 @@ function animate(){
   lastT=now;
 
   if(playing){ tYears+=yearsPerSec*dt; }
-  // 速度=模拟年/秒：低速看公转与四季，高速看岁差（25800年一圈）
+  // 速度=模拟年/秒：低速看公转与四季，高速看岁差（约25770年一圈，每年西退50.29″）
 
   // 地球位置：从黄道北极俯视逆时针公转（向东，真实方向）
   // 初始相位 a(0)=+90°，使 t=0 时太阳恰位于春分点方向（春分瞬间）
@@ -888,6 +891,8 @@ function animate(){
   const sunAz=orbA+Math.PI;
   const sp=new THREE.Vector3(49.5*Math.cos(sunAz),0,-49.5*Math.sin(sunAz));
   sunMarker.position.copy(sp);
+  // 昼夜判定用精确太阳方向：地心 → 太阳（与绿色地日连线共线，晨昏线严格过地心且垂直连线）
+  nightShell.material.uniforms.uSunDir.value.copy(sp).sub(earthPivot.position).normalize();
   const gp=greenLine.geometry.attributes.position;
   gp.setXYZ(0,earthPivot.position.x,0,earthPivot.position.z);
   gp.setXYZ(1,0,0,0);
