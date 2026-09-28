@@ -24,6 +24,9 @@
   button:hover{background:#1e4bb8;}
   button.gray{background:#8a93a8;}
   button.gray:hover{background:#6f7890;}
+  button.active{background:#2b5fd9;font-weight:600;
+    box-shadow:0 0 0 2px rgba(43,95,217,.35),0 2px 8px rgba(43,95,217,.55);}
+  button.active:hover{background:#1e4bb8;}
   input[type=range]{flex:1.2;accent-color:#2b5fd9;}
   .toggles{margin-top:8px;border-top:1px solid #dde2ec;padding-top:6px;display:grid;grid-template-columns:1fr 1fr;column-gap:12px;}
   .toggles label{display:flex;align-items:center;gap:5px;margin:4px 0;cursor:pointer;font-size:12px;white-space:nowrap;}
@@ -98,6 +101,7 @@
     <label><input type="checkbox" id="tgEquinox" checked> 春分点及其西退方向</label>
     <label><input type="checkbox" id="tgPole" checked> 天极轨迹与北极星更替</label>
     <label><input type="checkbox" id="tgZodiac"> 黄道十二宫（星座连线）</label>
+    <label><input type="checkbox" id="tgEqGrid"> 赤道坐标网格</label>
     <label><input type="checkbox" id="tgDate" checked> 节气日期环与视太阳</label>
   </div>
 </div>
@@ -407,7 +411,7 @@ const coneSide=new THREE.Line(
   new THREE.LineBasicMaterial({color:0xffa94d,transparent:true,opacity:0.3}));
 precessGroup.add(coneSide);
 const coneLabel=makeLabel('岁差圆锥（约25770 年一圈）',{color:'#ffc078',fontSize:20,scale:0.019});
-coneLabel.position.set(0,coneY+0.6,0);precessGroup.add(coneLabel);
+coneLabel.position.set(coneR+2.6,coneY-0.5,0);precessGroup.add(coneLabel);   // 移到圆锥圆环右侧，避免与「地轴（北端↑）」标签相互遮挡
 
 /* ---------- 春分点标记（标注在天球面上，沿黄道西退；原黄道面内圈位置不再显示） ---------- */
 const equinoxGroup=new THREE.Group();scene.add(equinoxGroup);
@@ -471,6 +475,23 @@ const traceLabel=makeLabel('天极轨迹圈 · 半径 23.44°',{color:'#c9a6ff',
 traceLabel.position.copy(polarPos(Math.PI/2)).y-=1.1;
 scene.add(traceLabel);
 poleStarObjs.push(traceLabel);
+
+// 当前天北极（P）：天轴与天球的交点标记 + 沿轨迹圈的西退方向箭头（每帧随时间移动）
+const curPoleGroup=new THREE.Group();scene.add(curPoleGroup);
+const curPoleDot=new THREE.Mesh(new THREE.SphereGeometry(0.32,16,12),
+  new THREE.MeshBasicMaterial({color:0xd8b4ff}));
+curPoleGroup.add(curPoleDot);
+const curPoleLabel=makeLabel('当前天北极（P）',{color:'#ffffff',fontSize:54,scale:0.054,stroke:'rgba(60,20,90,.95)'});
+curPoleLabel.position.set(0,1.4,0);curPoleGroup.add(curPoleLabel);
+// 西退切向箭头：局部 +X 为运动方向，每帧按轨迹切向旋转
+const poleArrow=new THREE.Group();curPoleGroup.add(poleArrow);
+const pShaft=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.4,8),
+  new THREE.MeshBasicMaterial({color:0xffa94d}));
+pShaft.rotation.z=Math.PI/2;pShaft.position.x=1.1;poleArrow.add(pShaft);
+const pHead=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.5,10),
+  new THREE.MeshBasicMaterial({color:0xffa94d}));
+pHead.rotation.z=-Math.PI/2;pHead.position.x=2.05;poleArrow.add(pHead);
+poleStarObjs.push(curPoleGroup);   // 随「天极轨迹与北极星更替」开关显隐
 
 /* ---------- 黄道十二宫 + 星座连线（真实亮星赤经赤纬） ---------- */
 const zodiacGroup=new THREE.Group();scene.add(zodiacGroup);
@@ -722,6 +743,71 @@ const skyGrid=new THREE.Group();scene.add(skyGrid);
   }
 })();
 
+/* ---------- 赤道坐标网格（以天赤道为基圈：赤纬圈 + 赤经线，随岁差进动，默认隐藏） ---------- */
+const eqGrid=new THREE.Group();scene.add(eqGrid);
+(function(){
+  const SR=54.35,seg=90;
+  // 赤道坐标基向量（precA=0 基准，随 eqGrid.rotation.y=precA 同步进动）
+  const n =new THREE.Vector3(Math.sin(TILT),Math.cos(TILT),0);           // 天北极方向
+  const e1=new THREE.Vector3(0,0,1);                                     // 赤经 0°（precA=0 时的春分点方向）
+  const e2=new THREE.Vector3(Math.cos(TILT),-Math.sin(TILT),0);          // 赤道面内正交方向
+  // 赤经 ra(°)、赤纬 dec(°) → 天球面点
+  function pt(raDeg,decDeg){
+    const ra=raDeg*D2R,dec=decDeg*D2R;
+    return new THREE.Vector3()
+      .addScaledVector(e1,Math.sin(ra)*Math.cos(dec))
+      .addScaledVector(e2,Math.cos(ra)*Math.cos(dec))
+      .addScaledVector(n,Math.sin(dec))
+      .multiplyScalar(SR);
+  }
+  // 与黄道网格同款着色：正面实线、背面短虚线减淡（改用淡红色调以区分）
+  const gridMat=new THREE.ShaderMaterial({
+    uniforms:{
+      uColor:{value:new THREE.Color(0xd49a9a)},
+      uFrontA:{value:0.38},
+      uBackA:{value:0.20},
+      uDashLen:{value:2.4}
+    },
+    vertexShader:`
+      attribute float aDist;
+      varying float vDist; varying float vFacing;
+      void main(){
+        vec4 wp=modelMatrix*vec4(position,1.0);
+        vFacing=dot(normalize(wp.xyz),normalize(cameraPosition-wp.xyz));
+        vDist=aDist;
+        gl_Position=projectionMatrix*viewMatrix*wp;
+      }`,
+    fragmentShader:`
+      uniform vec3 uColor; uniform float uFrontA,uBackA,uDashLen;
+      varying float vDist; varying float vFacing;
+      void main(){
+        float back=1.0-smoothstep(-0.02,0.02,vFacing);
+        float dash=step(0.45,fract(vDist/uDashLen));
+        float a=mix(uFrontA,uBackA,back)*mix(1.0,dash,back);
+        if(a<0.02) discard;
+        gl_FragColor=vec4(uColor,a);
+      }`,
+    transparent:true,depthWrite:false
+  });
+  function addGridLine(pts){
+    const d=[0];
+    for(let i=1;i<pts.length;i++)d.push(d[i-1]+pts[i].distanceTo(pts[i-1]));
+    const g=new THREE.BufferGeometry().setFromPoints(pts);
+    g.setAttribute('aDist',new THREE.Float32BufferAttribute(d,1));
+    eqGrid.add(new THREE.Line(g,gridMat));
+  }
+  // 赤纬圈：每 15° 一条（±15°~±75°；δ=0 为红色天赤道大圆，已单独绘制）
+  [-75,-60,-45,-30,-15,15,30,45,60,75].forEach(d2=>{
+    const pts=[];for(let k=0;k<=seg;k++)pts.push(pt(k/seg*360,d2));
+    addGridLine(pts);
+  });
+  // 赤经线：每 15°（共 24 条，过南北天极；赤经 0° 起于春分点）
+  for(let h=0;h<24;h++){
+    const pts=[];for(let d=-87;d<=87;d+=1.5)pts.push(pt(h*15,d));
+    addGridLine(pts);
+  }
+})();
+
 /* ---------- 状态与交互 ---------- */
 const NOW_YEAR=new Date().getFullYear();  // 当前真实年份（默认时间与复位目标）
 const YEAR0=-3000;                        // 周期进度时间起点：公元前 3000 年
@@ -734,15 +820,20 @@ let lastT=Date.now();
 
 const $=id=>document.getElementById(id);
 $('btnPlay').onclick=()=>{playing=!playing;$('btnPlay').textContent=playing?'⏸ 暂停':'▶ 播放';};
-$('btnReset').onclick=()=>{tYears=NOW_YEAR-EPOCH;};  // 复位：回到当前年份
+$('btnReset').onclick=()=>{tYears=NOW_YEAR-EPOCH;selBtns.forEach(b=>b.classList.remove('active'));};  // 复位：回到当前年份并清除按钮选中态
+// 按钮选中态：点击哪个哪个突出显示（互斥）
+const selBtns=[...document.querySelectorAll('#btnSlow,#btnFast,.term-btn')];
+function markActive(btn){selBtns.forEach(b=>b.classList.toggle('active',b===btn));}
 $('speed').oninput=e=>{
   const v=+e.target.value;                 // 0..100 对数映射 0.05..300 年/秒
   yearsPerSec=Math.pow(0.05,1-v/100)*Math.pow(300,v/100);
   $('speedTxt').textContent=(yearsPerSec<1?yearsPerSec.toFixed(2):yearsPerSec.toFixed(1))+' 年/秒';
+  // 手动拖动速度滑条时清除全部按钮选中态（按钮点击后再重新标记，见下方 onclick）
+  selBtns.forEach(b=>b.classList.remove('active'));
 };
 $('speed').oninput({target:$('speed')});
-$('btnSlow').onclick=()=>{$('speed').value=0;$('speed').oninput({target:$('speed')});};   // 滑条 0 点即 0.05 年/秒（对数映射下限）
-$('btnFast').onclick=()=>{$('speed').value=87;$('speed').oninput({target:$('speed')});};
+$('btnSlow').onclick=()=>{$('speed').value=0;$('speed').oninput({target:$('speed')});markActive($('btnSlow'));};   // 滑条 0 点即 0.05 年/秒（对数映射下限）
+$('btnFast').onclick=()=>{$('speed').value=87;$('speed').oninput({target:$('speed')});markActive($('btnFast'));};
 
 // 春分/夏至/秋分/冬至按钮：跳转到「周期进度当前所在年份」内该节气的时刻（并暂停便于观察）
 // 解 2πt ≡ λ+precA (mod 2π) 得同名气隔 step=PRECESS_YEARS/(PRECESS_YEARS+1) 年；取距当前年份中点最近的解
@@ -757,6 +848,7 @@ document.querySelectorAll('.term-btn').forEach(b=>{
     const yNow=Math.round(EPOCH+tYears);
     tYears=termTimeInYear(+b.dataset.term,yNow);
     playing=false;$('btnPlay').textContent='▶ 播放';
+    markActive(b);
   };
 });
 
@@ -858,6 +950,12 @@ function animate(){
   q.needsUpdate=true;
   poleRay.computeLineDistances();
 
+  // 当前天北极（P）标记与西退方向箭头：位于天轴与天球交点，箭头沿轨迹圈切向（方位角减小方向）
+  curPoleGroup.position.copy(polarPos(precA));
+  poleArrow.quaternion.setFromUnitVectors(
+    new THREE.Vector3(1,0,0),
+    new THREE.Vector3(Math.sin(precA),0,Math.cos(precA)).normalize());
+
   // 可见性
   precessGroup.visible=tg('tgAxis');
   axisLine.visible=axisLabel.visible=northTip.visible=southTip.visible=tg('tgAxis');
@@ -867,11 +965,13 @@ function animate(){
   zodiacGroup.visible=tg('tgZodiac');
   gridGroup.visible=true;                                   // 地球经纬网常显
   dateGroup.visible=sunMarker.visible=greenLine.visible=tg('tgDate');
-  skyGrid.visible=true; eqGroup.visible=true;               // 赤道网格与天赤道常显
+  skyGrid.visible=true; eqGroup.visible=true;               // 黄道网格与天赤道常显
+  eqGrid.visible=tg('tgEqGrid');                            // 赤道坐标网格（默认隐藏）
 
   // 节气环与天赤道随岁差旋转（附着于二分点）
   dateGroup.rotation.y=precA;
   eqGroup.rotation.y=precA;   // 黄道网格固定于黄道坐标系，不随岁差旋转
+  eqGrid.rotation.y=precA;    // 赤道坐标网格随天赤道同步进动（赤经 0° 始终对准春分点）
 
   // 节气日期随模拟年份更新：计算该年份下各节气的模型精准日期并重绘黄道上的标签。
   // 拖动进度条时以 ~100ms 节流刷新（年份高速掠过时仍持续跟随），松开手立即刷新到最终年份。
