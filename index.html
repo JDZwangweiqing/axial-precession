@@ -167,6 +167,22 @@ camera.position.set(0,58,138);
 const controls=new THREE.OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.dampingFactor=0.08;
 controls.target.set(0,0,0);
+// 打开网页时让天球充满窗口：按窗口较小的维度放大缩放，使天球（直径+标注余量≈114）贴边
+function fitSphereToWindow(){
+  const NEED=131;   // 天球直径 109 + 标注余量，再放大视域至天球约为满窗时的 90%
+  const zh=2*VIEW_H/NEED, zw=2*VIEW_H*camAspect/NEED;
+  camera.zoom=Math.min(zh,zw);
+  camera.updateProjectionMatrix();
+}
+fitSphereToWindow();
+// 记录打开网页时的初始视角（供「复位」按钮恢复）
+const CAM0={pos:camera.position.clone(),target:controls.target.clone(),zoom:camera.zoom};
+function resetCamera(){
+  camera.position.copy(CAM0.pos);
+  controls.target.copy(CAM0.target);
+  camera.zoom=CAM0.zoom;camera.updateProjectionMatrix();
+  controls.update();
+}
 
 scene.add(new THREE.AmbientLight(0xffffff,0.55));
 const sunLight=new THREE.PointLight(0xfff2cc,1.6,0,2);
@@ -277,7 +293,7 @@ const eclipticAxis=new THREE.Line(
   new THREE.LineDashedMaterial({color:0x7f8cab,dashSize:0.7,gapSize:0.5,transparent:true,opacity:0.6})
 );
 eclipticAxis.computeLineDistances();scene.add(eclipticAxis);
-scene.add(makeLabel('黄道北极（黄极）',{color:'#aab6d4',fontSize:44,scale:0.045}).translateY(SKY_R+4.6));
+scene.add(makeLabel('黄道北极（黄极）',{color:'#aab6d4',fontSize:44,scale:0.045}).translateY(SKY_R+2.8));
 
 /* ---------- 地球与岁差结构 ---------- */
 const earthPivot=new THREE.Group();scene.add(earthPivot); // 位于地球公转位置
@@ -820,7 +836,7 @@ let lastT=Date.now();
 
 const $=id=>document.getElementById(id);
 $('btnPlay').onclick=()=>{playing=!playing;$('btnPlay').textContent=playing?'⏸ 暂停':'▶ 播放';};
-$('btnReset').onclick=()=>{tYears=NOW_YEAR-EPOCH;selBtns.forEach(b=>b.classList.remove('active'));};  // 复位：回到当前年份并清除按钮选中态
+$('btnReset').onclick=()=>{tYears=NOW_YEAR-EPOCH;selBtns.forEach(b=>b.classList.remove('active'));resetCamera();};  // 复位：回到当前年份、清除按钮选中态并恢复初始视角
 // 按钮选中态：点击哪个哪个突出显示（互斥）
 const selBtns=[...document.querySelectorAll('#btnSlow,#btnFast,.term-btn')];
 function markActive(btn){selBtns.forEach(b=>b.classList.toggle('active',b===btn));}
@@ -1017,7 +1033,7 @@ function animate(){
     const cyc=((tYears-CYCLE_T0)%CYCLE_MAX+CYCLE_MAX)%CYCLE_MAX;
     $('cycle').value=Math.round(cyc/CYCLE_MAX*1000);
     const cy=Math.round(EPOCH+tYears);
-    $('cycleTxt').textContent=Math.round(cyc)+' / '+CYCLE_MAX+' 年（'+(cyc/CYCLE_MAX*100).toFixed(1)+'%）· '+
+    $('cycleTxt').textContent=Math.round(cyc)+' / '+Math.round(CYCLE_MAX)+' 年（'+(cyc/CYCLE_MAX*100).toFixed(1)+'%）· '+
       (cy<0?'公元前 '+(-cy):'公元 '+cy)+' 年';
   }
 }
