@@ -8,7 +8,7 @@
   html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#0b0e1a;}
   /* 页面分为左右两个功能区块：左侧平面区（标题+控制台），右侧 3D 区（图例+天球） */
   #layout{display:flex;width:100%;height:100%;}
-  #sidebar{flex:none;width:430px;height:100%;box-sizing:border-box;overflow-y:auto;
+  #sidebar{flex:none;width:388px;height:100%;box-sizing:border-box;overflow-y:auto;
     background:#f2f4fa;border-right:1px solid #dde2ec;padding:12px 12px 18px;}
   #stage{flex:1;position:relative;height:100%;overflow:hidden;background:#0b0e1a;}
   .panel{
@@ -95,10 +95,8 @@
       <span style="font-size:12px;flex:none;width:60px">周期进度</span>
       <input type="range" id="cycle" min="0" max="1000" value="0" style="flex:1">
     </div>
-    <div class="row" style="margin:2px 0;justify-content:space-between;flex-wrap:nowrap">
-      <span style="font-size:10px;color:#5a6478;flex:none;white-space:nowrap">← 前3000年</span>
+    <div class="row" style="margin:2px 0;justify-content:center;flex-wrap:nowrap">
       <span id="cycleTxt" style="font-size:11.5px;color:#0f1b3d;font-weight:600;white-space:nowrap">0 / 25770 年（0%）</span>
-      <span style="font-size:10px;color:#5a6478;flex:none;white-space:nowrap">后22800年 →</span>
     </div>
     <div class="note" style="margin:2px 0 0">从左到右拖动「周期进度」，手动演示一个完整岁差周期内地轴指向（天极）的变化。</div>
   </div>
