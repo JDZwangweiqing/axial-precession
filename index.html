@@ -6,13 +6,21 @@
 <title>地球岁差 3D 演示 · 约25770 年周期（每年西退50.29″）</title>
 <style>
   html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#0b0e1a;}
-  #app{width:100%;height:100%;}
+  /* 页面分为左右两个功能区块：左侧平面区（标题+控制台），右侧 3D 区（图例+天球） */
+  #layout{display:flex;width:100%;height:100%;}
+  #sidebar{flex:none;width:430px;height:100%;box-sizing:border-box;overflow-y:auto;
+    background:#f2f4fa;border-right:1px solid #dde2ec;padding:12px 12px 18px;}
+  #stage{flex:1;position:relative;height:100%;overflow:hidden;background:#0b0e1a;}
   .panel{
-    position:fixed;z-index:10;background:rgba(255,255,255,.94);color:#1c2333;
+    position:absolute;z-index:10;background:rgba(255,255,255,.94);color:#1c2333;
     border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13px;line-height:1.55;
   }
-  #ctrl{top:14px;left:14px;width:320px;padding:12px 14px;}
-  #ctrl .seal{position:absolute;top:8px;right:10px;width:44px;height:44px;object-fit:contain;opacity:.92;pointer-events:none;}
+  #sidebar .panel{position:static;box-shadow:0 2px 10px rgba(15,27,61,.12);}
+  #sidebar #ctrl{position:relative;}   /* 提高优先级：确保印章相对控制台定位 */
+  #title{padding:2px 4px 10px;text-align:center;background:none;box-shadow:none;}
+  #title h1{margin:0;font-size:17px;color:#0f1b3d;}
+  #ctrl{width:auto;padding:12px 14px;position:relative;}   /* relative：印章绝对定位于面板右上 */
+  #ctrl .seal{position:absolute;top:10px;right:12px;width:48px;height:48px;object-fit:contain;opacity:.92;pointer-events:none;}
   #ctrl h1{font-size:15px;margin:0 0 6px;color:#0f1b3d;}
   #ctrl .sub{font-size:11px;color:#5a6478;margin-bottom:8px;}
   .row{display:flex;align-items:center;gap:8px;margin:7px 0;}
@@ -31,31 +39,30 @@
   .toggles{margin-top:8px;border-top:1px solid #dde2ec;padding-top:6px;display:grid;grid-template-columns:1fr 1fr;column-gap:12px;}
   .toggles label{display:flex;align-items:center;gap:5px;margin:4px 0;cursor:pointer;font-size:12px;white-space:nowrap;}
   .toggles input{accent-color:#2b5fd9;}
-  #info{bottom:14px;left:14px;width:320px;padding:12px 14px;}
-  #info h2{margin:0 0 6px;font-size:14px;color:#0f1b3d;}
-  .kv{display:flex;justify-content:space-between;margin:3px 0;}
+  #info{width:auto;margin-top:12px;padding:12px 14px;}   /* 常驻侧栏底部，不隐藏 */
+  #info h2{margin:0 0 6px;font-size:14px;color:#0f1b3d;}  .kv{display:flex;justify-content:space-between;margin:3px 0;}
   .kv b{color:#0f1b3d;font-weight:600;}
   .star-now{background:#fff3cd;border-left:4px solid #e0a800;padding:6px 8px;border-radius:6px;margin:6px 0;}
-  .legend{bottom:14px;right:14px;padding:10px 14px;font-size:12px;max-width:250px;}
-  .legend h3{margin:0 0 6px;font-size:13px;color:#0f1b3d;}
-  .legend .it{display:flex;align-items:center;gap:7px;margin:4px 0;}
+  .legend{bottom:14px;right:14px;padding:10px 14px;font-size:12px;max-width:250px;
+    background:rgba(16,22,42,.82);color:#dfe6f5;}   /* 暗色底，融入 3D 舞台 */
+  .legend h3{margin:0 0 6px;font-size:13px;color:#ffffff;}
+  .legend .it{display:flex;align-items:center;gap:7px;margin:4px 0;color:#dfe6f5;}
   .dot{width:11px;height:11px;border-radius:50%;flex:none;}
   .note{font-size:11px;color:#5a6478;margin-top:6px;}
-  #title{top:14px;right:14px;padding:8px 14px;text-align:center;max-width:262px;}
-  #title h1{margin:0;font-size:17px;color:#0f1b3d;}
   #title p{margin:2px 0 0;font-size:11px;color:#5a6478;}
   @media (max-width:900px){#legend,#title{display:none;}}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="layout">
+  <!-- 左侧平面区：标题 + 控制台 -->
+  <div id="sidebar">
+    <div id="title">
+      <h1>地球岁差（进动）3D 演示</h1>
+      <p>视角：黄道面为基准水平面 · 地轴像陀螺一样摆动 · 周期约 25770 年 · 春分点沿黄道每年西退 50.29″</p>
+    </div>
 
-<div class="panel" id="title">
-  <h1>地球岁差（进动）3D 演示</h1>
-  <p>视角：黄道面为基准水平面 · 地轴像陀螺一样摆动 · 周期约 25770 年 · 春分点沿黄道每年西退 50.29″</p>
-</div>
-
-<div class="panel" id="ctrl">
+    <div class="panel" id="ctrl">
   <img class="seal" alt="印章" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAYAAAA4qEECAAAACXBIWXMAAAsTAAALEwEAmpwYAAAGsGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNi4wLWMwMDIgNzkuMTY0NDg4LCAyMDIwLzA3LzEwLTIyOjA2OjUzICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgMjIuMCAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDI2LTA5LTEzVDA3OjI0OjU3KzA4OjAwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyNi0wOS0xM1QxNToxMTozOCswODowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNi0wOS0xM1QxNToxMTozOCswODowMCIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHBob3Rvc2hvcDpJQ0NQcm9maWxlPSJzUkdCIElFQzYxOTY2LTIuMSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowZDExYjZkMS03MjVlLTZiNGQtODljZS0zNGMxOWVmMmQ3NmEiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NmMwZTEzMTEtNWNiMi1iZDQ2LTg2MGEtMjA5ZmU4NWE4NGI1IiB4bXBNTTpPcmlnaW5hbERvY3VtZW50SUQ9InhtcC5kaWQ6NmMwZTEzMTEtNWNiMi1iZDQ2LTg2MGEtMjA5ZmU4NWE4NGI1Ij4gPHhtcE1NOkhpc3Rvcnk+IDxyZGY6U2VxPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0iY3JlYXRlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDo2YzBlMTMxMS01Y2IyLWJkNDYtODYwYS0yMDlmZTg1YTg0YjUiIHN0RXZ0OndoZW49IjIwMjYtMDktMTNUMDc6MjQ6NTcrMDg6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCAyMi4wIChXaW5kb3dzKSIvPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0ic2F2ZWQiIHN0RXZ0Omluc3RhbmNlSUQ9InhtcC5paWQ6MjhhODA0NmUtYTM5OS0wOTRiLWEwMDQtYTU2MDkyZWQxMjNlIiBzdEV2dDp3aGVuPSIyMDI2LTA5LTEzVDE1OjA1OjAzKzA4OjAwIiBzdEV2dDpzb2Z0d2FyZUFnZW50PSJBZG9iZSBQaG90b3Nob3AgMjIuMCAoV2luZG93cykiIHN0RXZ0OmNoYW5nZWQ9Ii8iLz4gPHJkZjpsaSBzdEV2dDphY3Rpb249InNhdmVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjBkMTFiNmQxLTcyNWUtNmI0ZC04OWNlLTM0YzE5ZWYyZDc2YSIgc3RFdnQ6d2hlbj0iMjAyNi0wOS0xM1QxNToxMTozOCswODowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDIyLjAgKFdpbmRvd3MpIiBzdEV2dDpjaGFuZ2VkPSIvIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PqVaIE0AAA/pSURBVHic7V1/bBzHdf727kRS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">
   <h1>控制台</h1>
   <div class="sub">模拟时间：从公元前 3000 年起 · 默认当前年份</div>
@@ -88,10 +95,10 @@
       <span style="font-size:12px;flex:none;width:60px">周期进度</span>
       <input type="range" id="cycle" min="0" max="1000" value="0" style="flex:1">
     </div>
-    <div class="row" style="margin:2px 0;justify-content:space-between">
-      <span style="font-size:11px;color:#5a6478">← 公元前 3000 年</span>
-      <span id="cycleTxt" style="font-size:11.5px;color:#0f1b3d;font-weight:600">0 / 25770 年（0%）</span>
-      <span style="font-size:11px;color:#5a6478">公元 22800 年 →</span>
+    <div class="row" style="margin:2px 0;justify-content:space-between;flex-wrap:nowrap">
+      <span style="font-size:10px;color:#5a6478;flex:none;white-space:nowrap">← 前3000年</span>
+      <span id="cycleTxt" style="font-size:11.5px;color:#0f1b3d;font-weight:600;white-space:nowrap">0 / 25770 年（0%）</span>
+      <span style="font-size:10px;color:#5a6478;flex:none;white-space:nowrap">后22800年 →</span>
     </div>
     <div class="note" style="margin:2px 0 0">从左到右拖动「周期进度」，手动演示一个完整岁差周期内地轴指向（天极）的变化。</div>
   </div>
@@ -106,22 +113,28 @@
   </div>
 </div>
 
-<div class="panel" id="info">
-  <h2>实时状态</h2>
-  <div class="kv"><span>模拟年份</span><b id="iYear">公元 2000 年</b></div>
-  <div class="kv"><span>岁差累计角</span><b id="iPrec">0.0°</b></div>
-  <div class="kv"><span>春分点黄经</span><b id="iEq">0°（双鱼/白羊交界）</b></div>
-  <div class="star-now" id="iStar">当前北极星：<b>勾陈一（小熊座α）</b></div>
-  <div class="note">北极星更替：约公元前 2800 年 → 天龙座α（右枢）；现在 → 勾陈一；约公元 13700 年 → 织女星。<br>注：地球自转仅为示意，未按真实速度比例。</div>
-</div>
+  <!-- 实时状态：常驻左侧平面区底部，不隐藏 -->
+  <div class="panel" id="info">
+    <h2>实时状态</h2>
+    <div class="kv"><span>模拟年份</span><b id="iYear">公元 2000 年</b></div>
+    <div class="kv"><span>岁差累计角</span><b id="iPrec">0.0°</b></div>
+    <div class="kv"><span>春分点黄经</span><b id="iEq">0°（双鱼/白羊交界）</b></div>
+    <div class="star-now" id="iStar">当前北极星：<b>勾陈一（小熊座α）</b></div>
+    <div class="note">北极星更替：约公元前 2800 年 → 天龙座α（右枢）；现在 → 勾陈一；约公元 13700 年 → 织女星。<br>注：地球自转仅为示意，未按真实速度比例。</div>
+  </div>
+  </div>
 
-<div class="panel legend" id="legend">
-  <h3>图例</h3>
-  <div class="it"><span class="dot" style="background:#ffd23e"></span>太阳（黄道面中心）</div>
-  <div class="it"><span class="dot" style="background:#3f8cff"></span>地球（自转轴倾斜 23.44°）</div>
-  <div class="it"><span class="dot" style="background:#ff5252"></span>春分点（沿黄道西退）</div>
-  <div class="it"><span class="dot" style="background:#b06cff"></span>天极轨迹圈（半径 23.44°）</div>
-  <div class="it"><span class="dot" style="background:#fff"></span>黄道（地球公转轨道面）</div>
+  <!-- 右侧 3D 区：天球 + 图例 -->
+  <div id="stage">
+    <div class="panel legend" id="legend">
+      <h3>图例</h3>
+      <div class="it"><span class="dot" style="background:#ffd23e"></span>太阳（黄道面中心）</div>
+      <div class="it"><span class="dot" style="background:#3f8cff"></span>地球（自转轴倾斜 23.44°）</div>
+      <div class="it"><span class="dot" style="background:#ff5252"></span>春分点（沿黄道西退）</div>
+      <div class="it"><span class="dot" style="background:#b06cff"></span>天极轨迹圈（半径 23.44°）</div>
+      <div class="it"><span class="dot" style="background:#fff"></span>黄道（地球公转轨道面）</div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -146,11 +159,11 @@ const EPOCH_EQ0 = -Math.PI/2;         // 春分点在 t=0 的方位角（新约�
 const D2R = Math.PI/180;              // 角度→弧度
 
 /* ---------- 场景 ---------- */
-const app=document.getElementById('app');
+const app=document.getElementById('stage');   // 3D 区（右侧），画布渲染在其中
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.outputEncoding=THREE.sRGBEncoding;   // 贴图色彩校正
-renderer.setSize(innerWidth,innerHeight);
+renderer.setSize(app.clientWidth,app.clientHeight);
 app.appendChild(renderer.domElement);
 
 const scene=new THREE.Scene();
@@ -159,7 +172,7 @@ scene.background=new THREE.Color(0x0b0e1a);
 // 正交投影（平行光成像）：天球及各圆环不发生近大远小的透视畸变；
 // 文字标注由 animate 中按到相机的距离手动缩放，仍保留"远小近大"的纵深感
 const VIEW_H=95;   // 正交视域半高（恰好容纳整个天球及标注）
-let camAspect=innerWidth/innerHeight;
+let camAspect=app.clientWidth/app.clientHeight;   // 3D 区宽高比（非整窗）
 const camera=new THREE.OrthographicCamera(-VIEW_H*camAspect,VIEW_H*camAspect,VIEW_H,-VIEW_H,0.1,600);
 // 默认位于天球（半径≈54.5）之外：距离≈150，视域恰好容纳整个天球
 camera.position.set(0,58,138);
@@ -1043,12 +1056,14 @@ function tg(id){return $(id).checked;}
 const _wp=new THREE.Vector3();   // 复用的临时向量（文字距离缩放用）
 
 addEventListener('resize',()=>{
-  camAspect=innerWidth/innerHeight;
+  camAspect=app.clientWidth/app.clientHeight;
   camera.left=-VIEW_H*camAspect;camera.right=VIEW_H*camAspect;
   camera.top=VIEW_H;camera.bottom=-VIEW_H;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+  renderer.setSize(app.clientWidth,app.clientHeight);
 });
+
+/* ---------- 实时状态：常驻左侧平面区底部，不隐藏（无需切换逻辑） ---------- */
 
 /* ---------- 视角：以黄道面为基准水平面（黄极为天顶） ---------- */
 // 场景坐标本身即以黄道面为 XZ 平面、黄道极为 +Y：不做额外旋转。
