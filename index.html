@@ -522,12 +522,14 @@ poleStarObjs.push(curPoleGroup);   // 随「天极轨迹与北极星更替」开
 
 /* ---------- 黄道十二宫 + 星座连线（真实亮星赤经赤纬） ---------- */
 const zodiacGroup=new THREE.Group();scene.add(zodiacGroup);
+/* ---------- 二分二至点名称（地球轨道外侧，随岁差西退） ---------- */
 const ZODIAC=['白羊','金牛','双子','巨蟹','狮子','室女','天秤','天蝎','人马','摩羯','宝瓶','双鱼'];
-ZODIAC.forEach((z,i)=>{
-  const az=EPOCH_EQ0 + (i+0.5)*(Math.PI*2/12);
-  const lb=makeLabel(z+'座',{color:'#9fb3e8',fontSize:26,scale:0.026});
+const seasonPtsGroup=new THREE.Group();scene.add(seasonPtsGroup);
+[['春分',0],['夏至',90],['秋分',180],['冬至',270]].forEach(([nm,lam])=>{
+  const az=EPOCH_EQ0+lam*D2R;
+  const lb=makeLabel(nm,{color:'#7dffa8',fontSize:30,scale:0.032});
   lb.position.set((ORBIT_R+1.6)*Math.cos(az),0.25,-(ORBIT_R+1.6)*Math.sin(az));
-  zodiacGroup.add(lb);
+  seasonPtsGroup.add(lb);
 });
 
 // 星座数据：stars=[赤经(小时),赤纬(°)]，lines=星点索引连线
@@ -847,7 +849,12 @@ let lastT=Date.now();
 
 const $=id=>document.getElementById(id);
 $('btnPlay').onclick=()=>{playing=!playing;$('btnPlay').textContent=playing?'⏸ 暂停':'▶ 播放';};
-$('btnReset').onclick=()=>{tYears=NOW_YEAR-EPOCH;selBtns.forEach(b=>b.classList.remove('active'));resetCamera();};  // 复位：回到当前年份、清除按钮选中态并恢复初始视角
+$('btnReset').onclick=()=>{
+  tYears=NOW_YEAR-EPOCH;                                  // 回到当前年份
+  selBtns.forEach(b=>b.classList.remove('active'));       // 清除按钮选中态
+  resetCamera();                                          // 恢复初始视角
+  playing=false;$('btnPlay').textContent='▶ 播放';         // 同时停止当前播放（与暂停按钮状态同步）
+};
 // 按钮选中态：点击哪个哪个突出显示（互斥）
 const selBtns=[...document.querySelectorAll('#btnSlow,#btnFast,.term-btn')];
 function markActive(btn){selBtns.forEach(b=>b.classList.toggle('active',b===btn));}
@@ -997,6 +1004,7 @@ function animate(){
 
   // 节气环与天赤道随岁差旋转（附着于二分点）
   dateGroup.rotation.y=precA;
+  seasonPtsGroup.rotation.y=precA;   // 二分二至点名称随岁差同步西退
   eqGroup.rotation.y=precA;   // 黄道网格固定于黄道坐标系，不随岁差旋转
   eqGrid.rotation.y=precA;    // 赤道坐标网格随天赤道同步进动（赤经 0° 始终对准春分点）
 
